@@ -143,7 +143,6 @@
         <div>
           <div class="list-head">
             <h1>Structures</h1>
-            <button class="btn btn-primary btn-sm" data-action="add-structure">Add Structure</button>
           </div>
           <input class="search" id="structures-search" type="search"
                  placeholder="Search structures…" value="${esc(state.structuresSearch)}" />
@@ -156,21 +155,20 @@
               <button class="card ${s.id === state.selectedStructureId ? "selected" : ""}"
                       data-action="open-structure" data-id="${esc(s.id)}">
                 <div class="card-title">${esc(s.title || "(untitled)")}</div>
-                <div class="card-sub">Updated ${esc(fmtDate(s.updatedAt))}</div>
-                <div class="card-snippet">${esc(snippet(s.content, 140))}</div>
+                <div class="card-snippet">${esc(snippet(s.example || s.content, 140))}</div>
               </button>`
                     )
                     .join("")
                 : `<div class="empty">${
                     state.structures.length
                       ? "No structures match your search."
-                      : "No structures yet. Add your first framework."
+                      : "No structures."
                   }</div>`
             }
           </div>
         </div>
         <div class="panel">
-          ${selected ? structureDetailHTML(selected) : `<div class="empty">Select a structure to read it, or add a new one.</div>`}
+          ${selected ? structureDetailHTML(selected) : `<div class="empty">Select a structure to read it.</div>`}
         </div>
       </div>
     `;
@@ -196,14 +194,8 @@
     return `
       <div class="detail-head">
         <h1>${esc(s.title || "(untitled)")}</h1>
-        <div class="detail-actions">
-          <button class="btn btn-sm" data-action="edit-structure" data-id="${esc(s.id)}">Edit</button>
-          <button class="btn btn-sm btn-danger" data-action="delete-structure" data-id="${esc(s.id)}">Delete</button>
-        </div>
       </div>
-      <div class="detail-meta">
-        Created ${esc(fmtDate(s.createdAt))} · Updated ${esc(fmtDate(s.updatedAt))}
-      </div>
+      <div class="detail-meta">Shared structure library · read-only</div>
       <div class="detail-body">${esc(s.content || "")}</div>
 
       <div class="ref-box">
@@ -340,8 +332,6 @@
     return (
       `<option value="">${esc(placeholder)}</option>` +
       state.structures
-        .slice()
-        .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
         .map(
           (s) =>
             `<option value="${esc(s.id)}" ${s.id === selectedId ? "selected" : ""}>${esc(
@@ -634,72 +624,6 @@
     if (e.key === "Escape" && !overlay.hidden) closeModal();
   });
 
-  function structureForm(existing) {
-    return `
-      <div class="form-row">
-        <label for="f-title">Title</label>
-        <input type="text" id="f-title" value="${esc(existing ? existing.title : "")}" />
-      </div>
-      <div class="form-row">
-        <label for="f-content">Structure / framework</label>
-        <textarea id="f-content" rows="12">${esc(existing ? existing.content : "")}</textarea>
-        <div class="hint">The framework itself — its steps, form, sequence, rules.</div>
-      </div>
-    `;
-  }
-
-  function openStructureForm(existing) {
-    openModal(existing ? "Edit Structure" : "Add Structure", structureForm(existing), () => {
-      const title = document.getElementById("f-title").value.trim();
-      const content = document.getElementById("f-content").value;
-      if (!title) {
-        toast("Title is required.");
-        document.getElementById("f-title").focus();
-        return;
-      }
-      const list = Store.loadStructures();
-      if (existing) {
-        const idx = list.findIndex((s) => s.id === existing.id);
-        if (idx !== -1) {
-          list[idx] = { ...list[idx], title, content, updatedAt: Store.now() };
-        }
-      } else {
-        const rec = {
-          id: Store.uid("structure"),
-          title,
-          content,
-          createdAt: Store.now(),
-          updatedAt: Store.now(),
-        };
-        list.push(rec);
-        state.selectedStructureId = rec.id;
-      }
-      Store.saveStructures(list);
-      reloadLibraries();
-      closeModal();
-      toast(existing ? "Structure updated." : "Structure added.");
-      render();
-    });
-  }
-
-  /* ---------------- deletes ---------------- */
-
-  function deleteStructure(id) {
-    const s = structureById(id);
-    if (!s) return;
-    if (!confirm(`Delete structure "${s.title || "(untitled)"}"? This cannot be undone.`)) return;
-    const list = Store.loadStructures().filter((x) => x.id !== id);
-    Store.saveStructures(list);
-    if (state.selectedStructureId === id) state.selectedStructureId = null;
-    if (state.wb.structureId === id) {
-      state.wb.structureId = "";
-      clearResults();
-    }
-    reloadLibraries();
-    toast("Structure deleted.");
-    render();
-  }
-
   /* ---------------- export / import ---------------- */
 
   function exportJSON() {
@@ -762,18 +686,9 @@
     if (!el) return;
     const id = el.dataset.id;
     switch (el.dataset.action) {
-      case "add-structure":
-        openStructureForm(null);
-        break;
       case "open-structure":
         state.selectedStructureId = id;
         renderStructures();
-        break;
-      case "edit-structure":
-        openStructureForm(structureById(id));
-        break;
-      case "delete-structure":
-        deleteStructure(id);
         break;
 
       case "open-topic":

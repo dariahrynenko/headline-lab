@@ -1,16 +1,13 @@
 /* Persistence layer.
  *
- * Structures  -> localStorage key "hl.structures", per-browser user data.
- * Topics      -> canonical shared library defined in seed-topics.js. NOT stored
- *                per-browser: every load returns the current seed-topics.js
- *                definitions, so updating that file and redeploying updates
- *                every user. Topics are read-only in the UI.
+ * Structures -> canonical shared library defined in seed-structures.js.
+ * Topics     -> canonical shared library defined in seed-topics.js.
  *
- * Structure writes persist the whole array back. Callers mutate the array they
- * get from loadStructures(), then call saveStructures().
- *
- * Structure data survives page refresh and browser restart. It is per-browser
- * and per-device only — use Export / Import JSON to move it elsewhere.
+ * Neither is stored per-browser: every load returns the current seed file's
+ * definitions, so updating a seed file and redeploying updates every user.
+ * Both are read-only in the UI. Any legacy per-browser copy from older
+ * versions is purged on load. Export produces a snapshot; there is nothing to
+ * import into.
  */
 
 window.Store = (function () {
@@ -52,14 +49,29 @@ window.Store = (function () {
     return prefix + "-" + now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
-  /* ---------- Structures ---------- */
+  /* ---------- Structures (canonical, read-only) ---------- */
 
+  // Structures come straight from seed-structures.js on every call — never from
+  // localStorage. `title` and `content` are derived from pattern/example so the
+  // existing list, detail, and generator UI keep working unchanged.
   function loadStructures() {
-    return readArray(K_STRUCTURES) || [];
-  }
-
-  function saveStructures(list) {
-    return writeArray(K_STRUCTURES, list);
+    try {
+      localStorage.removeItem(K_STRUCTURES);
+    } catch (e) {
+      /* ignore */
+    }
+    return (window.SEED_STRUCTURES || []).map((s) => {
+      const pattern = s.pattern || "";
+      const example = s.example || "";
+      return {
+        id: s.id || uid("structure"),
+        pattern,
+        example,
+        title: pattern,
+        content: "Pattern:\n" + pattern + "\n\nWinning example:\n" + example,
+        seed: true,
+      };
+    });
   }
 
   /* ---------- Topics (canonical, read-only) ---------- */
@@ -86,55 +98,28 @@ window.Store = (function () {
 
   /* ---------- Export / Import ---------- */
 
+  // A read-only snapshot of both canonical libraries.
   function exportAll() {
     return {
       app: "headline-lab",
       version: 1,
       exportedAt: new Date().toISOString(),
       structures: loadStructures(),
+      topics: loadTopics(),
     };
   }
 
-  /* Import affects the Structures library only. Topics are canonical shared data
-   * from seed-topics.js and are never written from an import file.
-   *   "merge"   - add structures with unseen ids, update ones with matching ids
-   *   "replace" - overwrite the Structures library with the file's contents
-   * Returns a summary object for the UI.
-   */
-  function importAll(data, mode) {
-    if (!data || typeof data !== "object") throw new Error("File is not valid JSON.");
-    const incomingStructures = Array.isArray(data.structures) ? data.structures : [];
-
-    if (mode === "replace") {
-      saveStructures(incomingStructures);
-      return { mode, structures: incomingStructures.length };
-    }
-
-    // merge
-    const structures = loadStructures();
-    let sAdded = 0,
-      sUpdated = 0;
-
-    for (const inc of incomingStructures) {
-      if (!inc || !inc.id) continue;
-      const idx = structures.findIndex((x) => x.id === inc.id);
-      if (idx === -1) {
-        structures.push(inc);
-        sAdded++;
-      } else {
-        structures[idx] = inc;
-        sUpdated++;
-      }
-    }
-    saveStructures(structures);
-    return { mode: "merge", sAdded, sUpdated };
+  // Structures and Topics are canonical shared data. There is nothing to import.
+  function importAll() {
+    throw new Error(
+      "Structures and Topics are a shared, read-only library — there is nothing to import."
+    );
   }
 
   return {
     uid,
     now,
     loadStructures,
-    saveStructures,
     loadTopics,
     exportAll,
     importAll,
