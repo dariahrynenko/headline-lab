@@ -1,17 +1,19 @@
 /* Persistence layer.
  *
  * Structures -> canonical shared library defined in seed-structures.js.
+ * Scenes     -> canonical shared library defined in seed-scenes.js (empty for now).
  * Topics     -> canonical shared library defined in seed-topics.js.
  *
- * Neither is stored per-browser: every load returns the current seed file's
+ * None is stored per-browser: every load returns the current seed file's
  * definitions, so updating a seed file and redeploying updates every user.
- * Both are read-only in the UI. Any legacy per-browser copy from older
+ * All are read-only in the UI. Any legacy per-browser copy from older
  * versions is purged on load. Export produces a snapshot; there is nothing to
  * import into.
  */
 
 window.Store = (function () {
   const K_STRUCTURES = "hl.structures";
+  const K_SCENES = "hl.scenes";
   const K_TOPICS = "hl.topics";
 
   function readArray(key) {
@@ -60,18 +62,37 @@ window.Store = (function () {
     } catch (e) {
       /* ignore */
     }
-    return (window.SEED_STRUCTURES || []).map((s) => {
-      const pattern = s.pattern || "";
-      const example = s.example || "";
-      return {
-        id: s.id || uid("structure"),
-        pattern,
-        example,
-        title: pattern,
-        content: "Pattern:\n" + pattern + "\n\nWinning example:\n" + example,
-        seed: true,
-      };
-    });
+    return (window.SEED_STRUCTURES || []).map((s) => normalizeStructure(s, "structure"));
+  }
+
+  /* ---------- Scenes (canonical, read-only) ---------- */
+
+  // Scene structures come straight from seed-scenes.js on every call — same
+  // model and normalization as loadStructures(). Empty until canonical scene
+  // structures are added to seed-scenes.js.
+  function loadScenes() {
+    try {
+      localStorage.removeItem(K_SCENES);
+    } catch (e) {
+      /* ignore */
+    }
+    return (window.SEED_SCENES || []).map((s) => normalizeStructure(s, "scene"));
+  }
+
+  // Shared normalization for headline structures and scene structures: derives
+  // `title` / `content` from pattern / example (each overridable) so the
+  // existing list, detail, and generator UI keep working unchanged.
+  function normalizeStructure(s, idPrefix) {
+    const pattern = s.pattern || "";
+    const example = s.example || "";
+    return {
+      id: s.id || uid(idPrefix),
+      pattern,
+      example,
+      title: s.title || pattern,
+      content: s.content || "Pattern:\n" + pattern + "\n\nWinning example:\n" + example,
+      seed: true,
+    };
   }
 
   /* ---------- Topics (canonical, read-only) ---------- */
@@ -98,21 +119,22 @@ window.Store = (function () {
 
   /* ---------- Export / Import ---------- */
 
-  // A read-only snapshot of both canonical libraries.
+  // A read-only snapshot of the canonical libraries.
   function exportAll() {
     return {
       app: "headline-lab",
       version: 1,
       exportedAt: new Date().toISOString(),
       structures: loadStructures(),
+      scenes: loadScenes(),
       topics: loadTopics(),
     };
   }
 
-  // Structures and Topics are canonical shared data. There is nothing to import.
+  // Structures, Scenes and Topics are canonical shared data. Nothing to import.
   function importAll() {
     throw new Error(
-      "Structures and Topics are a shared, read-only library — there is nothing to import."
+      "The Structure, Scene and Topic libraries are shared and read-only — there is nothing to import."
     );
   }
 
@@ -120,6 +142,7 @@ window.Store = (function () {
     uid,
     now,
     loadStructures,
+    loadScenes,
     loadTopics,
     exportAll,
     importAll,

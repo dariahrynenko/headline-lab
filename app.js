@@ -12,9 +12,11 @@
 
   const state = {
     tab: "generator",
-    structures: [],
+    structures: [], // canonical headline structures
+    scenes: [], // canonical scene structures (empty for now)
     topics: [],
 
+    structuresMode: "headlines", // "headlines" | "scenes" — toggle inside the Structures tab
     structuresSearch: "",
     topicsSearch: "",
     selectedStructureId: null,
@@ -23,6 +25,7 @@
 
     wb: {
       mode: "A", // "A" = write with structure, "B" = adapt reference headline
+      structureKind: "headlines", // "headlines" | "scenes" — which library the structure picker shows
       structureId: "",
       topicId: "",
       referenceHeadline: "",
@@ -34,6 +37,7 @@
 
   function reloadLibraries() {
     state.structures = Store.loadStructures();
+    state.scenes = Store.loadScenes();
     state.topics = Store.loadTopics();
   }
 
@@ -126,8 +130,12 @@
   /* ---------------- Structures tab ---------------- */
 
   function renderStructures() {
+    const mode = state.structuresMode === "scenes" ? "scenes" : "headlines";
+    const dataset = mode === "scenes" ? state.scenes : state.structures;
+    const noun = mode === "scenes" ? "scenes" : "structures";
+
     const q = state.structuresSearch.trim().toLowerCase();
-    const items = state.structures
+    const items = dataset
       .filter(
         (s) =>
           !q ||
@@ -136,7 +144,15 @@
       )
       .sort(byUpdatedDesc);
 
-    const selected = structureById(state.selectedStructureId);
+    const selected = dataset.find((s) => s.id === state.selectedStructureId) || null;
+
+    const emptyText = dataset.length
+      ? `No ${noun} match your search.`
+      : mode === "scenes"
+      ? "No scene structures yet."
+      : "No structures.";
+    const placeholderText =
+      mode === "scenes" ? "Scene structures will appear here." : "Select a structure to read it.";
 
     view.innerHTML = `
       <div class="split">
@@ -144,8 +160,12 @@
           <div class="list-head">
             <h1>Structures</h1>
           </div>
+          <div class="segmented">
+            <button class="seg ${mode === "headlines" ? "active" : ""}" data-action="structures-mode" data-mode="headlines">Headlines</button>
+            <button class="seg ${mode === "scenes" ? "active" : ""}" data-action="structures-mode" data-mode="scenes">Scenes</button>
+          </div>
           <input class="search" id="structures-search" type="search"
-                 placeholder="Search structures…" value="${esc(state.structuresSearch)}" />
+                 placeholder="Search ${noun}…" value="${esc(state.structuresSearch)}" />
           <div class="card-list">
             ${
               items.length
@@ -159,16 +179,12 @@
               </button>`
                     )
                     .join("")
-                : `<div class="empty">${
-                    state.structures.length
-                      ? "No structures match your search."
-                      : "No structures."
-                  }</div>`
+                : `<div class="empty">${emptyText}</div>`
             }
           </div>
         </div>
         <div class="panel">
-          ${selected ? structureDetailHTML(selected) : `<div class="empty">Select a structure to read it.</div>`}
+          ${selected ? structureDetailHTML(selected) : `<div class="empty">${placeholderText}</div>`}
         </div>
       </div>
     `;
@@ -328,10 +344,23 @@
     );
   }
 
+  // The structure picker in the Generator shows either the canonical headline
+  // structures or the canonical scene structures, per the Headlines | Scenes
+  // toggle. The Generator is the only place structureKind applies.
+  function wbStructureKind() {
+    return state.wb.structureKind === "scenes" ? "scenes" : "headlines";
+  }
+  function wbStructureDataset() {
+    return wbStructureKind() === "scenes" ? state.scenes : state.structures;
+  }
+  function wbSelectedStructure() {
+    return wbStructureDataset().find((s) => s.id === state.wb.structureId) || null;
+  }
+
   function structureOptions(selectedId, placeholder) {
     return (
       `<option value="">${esc(placeholder)}</option>` +
-      state.structures
+      wbStructureDataset()
         .map(
           (s) =>
             `<option value="${esc(s.id)}" ${s.id === selectedId ? "selected" : ""}>${esc(
@@ -344,14 +373,15 @@
 
   function canGenerate() {
     if (!topicById(state.wb.topicId)) return false;
-    if (state.wb.mode === "A") return !!structureById(state.wb.structureId);
+    if (state.wb.mode === "A") return !!wbSelectedStructure();
     return state.wb.referenceHeadline.trim().length > 0;
   }
 
   function generateHint() {
-    return state.wb.mode === "A"
-      ? "Select a structure and a topic."
-      : "Enter a reference headline and select a topic.";
+    if (state.wb.mode === "B") return "Enter a reference headline and select a topic.";
+    if (wbStructureKind() === "scenes" && !state.scenes.length)
+      return "No scene structures available yet.";
+    return `Select a ${wbStructureKind() === "scenes" ? "scene" : "structure"} and a topic.`;
   }
 
   function clearResults() {
@@ -377,7 +407,7 @@
 
       <div class="gen-cta">
         <button class="btn-generate" data-action="wb-generate" ${canGenerate() ? "" : "disabled"}>
-          Generate headlines
+          ${m === "A" && wbStructureKind() === "scenes" ? "Generate scenes" : "Generate headlines"}
         </button>
         <span class="cta-hint" id="wb-generate-hint">${canGenerate() ? "" : esc(generateHint())}</span>
       </div>
@@ -397,14 +427,26 @@
   }
 
   function generatorAHTML() {
+    const kind = wbStructureKind();
+    const dataset = wbStructureDataset();
+    const picker = dataset.length
+      ? `<div class="select-wrap">
+           <select id="wb-structure">${structureOptions(
+             state.wb.structureId,
+             kind === "scenes" ? "Select a scene…" : "Select a structure…"
+           )}</select>
+         </div>
+         <div id="wb-structure-preview" class="preview"></div>`
+      : `<div class="preview preview-muted">No scene structures yet.</div>`;
     return `
       <div class="gen-grid">
         <section class="gen-col">
           <span class="field-label">Structure</span>
-          <div class="select-wrap">
-            <select id="wb-structure">${structureOptions(state.wb.structureId, "Select a structure…")}</select>
+          <div class="segmented" style="margin-bottom:0;align-self:flex-start">
+            <button class="seg ${kind === "headlines" ? "active" : ""}" data-action="wb-structure-kind" data-kind="headlines">Headlines</button>
+            <button class="seg ${kind === "scenes" ? "active" : ""}" data-action="wb-structure-kind" data-kind="scenes">Scenes</button>
           </div>
-          <div id="wb-structure-preview" class="preview"></div>
+          ${picker}
         </section>
         <section class="gen-col">
           <span class="field-label">Topic</span>
@@ -490,7 +532,7 @@
 
     if (state.wb.mode === "A") {
       const structPrev = document.getElementById("wb-structure-preview");
-      if (structPrev) structPrev.innerHTML = structurePreviewHTML(structureById(state.wb.structureId));
+      if (structPrev) structPrev.innerHTML = structurePreviewHTML(wbSelectedStructure());
     }
   }
 
@@ -515,7 +557,9 @@
       return;
     }
     if (!wb.results || !wb.results.length) {
-      box.innerHTML = `<div class="results-empty">Your generated headlines will appear here.</div>`;
+      const noun =
+        wb.mode === "A" && wbStructureKind() === "scenes" ? "scenes" : "headlines";
+      box.innerHTML = `<div class="results-empty">Your generated ${noun} will appear here.</div>`;
       return;
     }
 
@@ -546,6 +590,17 @@
   async function generate() {
     if (!canGenerate() || state.wb.loading) return;
     const wb = state.wb;
+
+    // Keep the selected mode consistent with the output. Scene generation is not
+    // wired up yet (and the scene library is empty), so Scenes mode never
+    // produces headlines.
+    if (wb.mode === "A" && wbStructureKind() === "scenes") {
+      wb.results = null;
+      wb.error = "Scene generation is not available yet.";
+      renderResults();
+      return;
+    }
+
     wb.loading = true;
     wb.error = null;
     wb.results = null;
@@ -560,8 +615,9 @@
       topic: { name: topic.name, description: topic.description, pains: topic.pains },
     };
     if (wb.mode === "A") {
-      const s = structureById(wb.structureId);
+      const s = wbSelectedStructure();
       payload.structure = { title: s.title, content: s.content };
+      payload.kind = "headlines";
     } else {
       payload.referenceHeadline = wb.referenceHeadline.trim();
     }
@@ -686,6 +742,16 @@
     if (!el) return;
     const id = el.dataset.id;
     switch (el.dataset.action) {
+      case "structures-mode": {
+        const m = el.dataset.mode === "scenes" ? "scenes" : "headlines";
+        if (state.structuresMode !== m) {
+          state.structuresMode = m;
+          state.selectedStructureId = null;
+          state.structuresSearch = "";
+        }
+        renderStructures();
+        break;
+      }
       case "open-structure":
         state.selectedStructureId = id;
         renderStructures();
@@ -703,6 +769,16 @@
         }
         renderGenerator();
         break;
+      case "wb-structure-kind": {
+        const k = el.dataset.kind === "scenes" ? "scenes" : "headlines";
+        if (state.wb.structureKind !== k) {
+          state.wb.structureKind = k;
+          state.wb.structureId = "";
+          clearResults();
+        }
+        renderGenerator();
+        break;
+      }
       case "wb-generate":
       case "wb-regenerate":
         generate();
