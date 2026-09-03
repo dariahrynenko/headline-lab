@@ -1,0 +1,12 @@
+{
+  "name": "headline-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local marketing library + headline workbench. No dependencies.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
