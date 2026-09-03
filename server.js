@@ -223,7 +223,12 @@ function serveStatic(req, res) {
       res.end("Not found");
       return;
     }
-    res.writeHead(200, { "content-type": STATIC_TYPES[ext] });
+    // no-cache: browsers revalidate every load, so a redeployed seed-topics.js
+    // (the canonical Topic library) reaches returning users immediately.
+    res.writeHead(200, {
+      "content-type": STATIC_TYPES[ext],
+      "cache-control": "no-cache",
+    });
     res.end(buf);
   });
 }

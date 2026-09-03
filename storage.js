@@ -1,15 +1,16 @@
-/* Persistence layer — localStorage only, no backend.
+/* Persistence layer.
  *
- * Keys:
- *   hl.structures  -> JSON array of Structure objects
- *   hl.topics      -> JSON array of Topic objects
+ * Structures  -> localStorage key "hl.structures", per-browser user data.
+ * Topics      -> canonical shared library defined in seed-topics.js. NOT stored
+ *                per-browser: every load returns the current seed-topics.js
+ *                definitions, so updating that file and redeploying updates
+ *                every user. Topics are read-only in the UI.
  *
- * Every write persists the whole array back. Callers mutate the array they get
- * from load*(), then call save*(). Existing records are never touched unless the
- * caller changes them.
+ * Structure writes persist the whole array back. Callers mutate the array they
+ * get from loadStructures(), then call saveStructures().
  *
- * Data survives page refresh and browser restart. It is per-browser and
- * per-device only — use Export / Import JSON to move it elsewhere.
+ * Structure data survives page refresh and browser restart. It is per-browser
+ * and per-device only — use Export / Import JSON to move it elsewhere.
  */
 
 window.Store = (function () {
@@ -61,29 +62,26 @@ window.Store = (function () {
     return writeArray(K_STRUCTURES, list);
   }
 
-  /* ---------- Topics ---------- */
+  /* ---------- Topics (canonical, read-only) ---------- */
 
+  // Topics come straight from seed-topics.js on every call — never from
+  // localStorage. This guarantees every user sees the same set and that a
+  // redeployed seed-topics.js reaches everyone. Any legacy per-browser copy
+  // written by older versions is purged here.
   function loadTopics() {
-    let list = readArray(K_TOPICS);
-    if (list === null) {
-      // First run: seed from seed-topics.js and persist once.
-      const seeds = (window.SEED_TOPICS || []).map((t) => ({
-        id: t.id || uid("topic"),
-        name: t.name || "",
-        description: t.description || "",
-        pains: Array.isArray(t.pains) ? t.pains.slice() : [],
-        seed: true,
-        createdAt: now(),
-        updatedAt: now(),
-      }));
-      writeArray(K_TOPICS, seeds);
-      list = seeds;
+    try {
+      localStorage.removeItem(K_TOPICS);
+    } catch (e) {
+      /* ignore */
     }
-    return list;
-  }
-
-  function saveTopics(list) {
-    return writeArray(K_TOPICS, list);
+    return (window.SEED_TOPICS || []).map((t) => ({
+      id: t.id || uid("topic"),
+      name: t.name || "",
+      description: t.description || "",
+      pains: Array.isArray(t.pains) ? t.pains.slice() : [],
+      reframe: t.reframe || "",
+      seed: true,
+    }));
   }
 
   /* ---------- Export / Import ---------- */
@@ -94,37 +92,28 @@ window.Store = (function () {
       version: 1,
       exportedAt: new Date().toISOString(),
       structures: loadStructures(),
-      topics: loadTopics(),
     };
   }
 
-  /* Import modes:
-   *   "merge"   - add records with unseen ids, update records with matching ids
-   *   "replace" - overwrite both libraries with the file's contents
+  /* Import affects the Structures library only. Topics are canonical shared data
+   * from seed-topics.js and are never written from an import file.
+   *   "merge"   - add structures with unseen ids, update ones with matching ids
+   *   "replace" - overwrite the Structures library with the file's contents
    * Returns a summary object for the UI.
    */
   function importAll(data, mode) {
     if (!data || typeof data !== "object") throw new Error("File is not valid JSON.");
     const incomingStructures = Array.isArray(data.structures) ? data.structures : [];
-    const incomingTopics = Array.isArray(data.topics) ? data.topics : [];
 
     if (mode === "replace") {
       saveStructures(incomingStructures);
-      saveTopics(incomingTopics);
-      return {
-        mode,
-        structures: incomingStructures.length,
-        topics: incomingTopics.length,
-      };
+      return { mode, structures: incomingStructures.length };
     }
 
     // merge
     const structures = loadStructures();
-    const topics = loadTopics();
     let sAdded = 0,
-      sUpdated = 0,
-      tAdded = 0,
-      tUpdated = 0;
+      sUpdated = 0;
 
     for (const inc of incomingStructures) {
       if (!inc || !inc.id) continue;
@@ -137,20 +126,8 @@ window.Store = (function () {
         sUpdated++;
       }
     }
-    for (const inc of incomingTopics) {
-      if (!inc || !inc.id) continue;
-      const idx = topics.findIndex((x) => x.id === inc.id);
-      if (idx === -1) {
-        topics.push(inc);
-        tAdded++;
-      } else {
-        topics[idx] = inc;
-        tUpdated++;
-      }
-    }
     saveStructures(structures);
-    saveTopics(topics);
-    return { mode: "merge", sAdded, sUpdated, tAdded, tUpdated };
+    return { mode: "merge", sAdded, sUpdated };
   }
 
   return {
@@ -159,7 +136,6 @@ window.Store = (function () {
     loadStructures,
     saveStructures,
     loadTopics,
-    saveTopics,
     exportAll,
     importAll,
   };

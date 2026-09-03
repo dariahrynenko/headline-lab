@@ -1,77 +1,128 @@
-/* Hardcoded starter Topics.
+/* Hardcoded starter Topics — the Headline Lab topic library.
  *
  * These are copied into localStorage on first run (see storage.js). After that
  * they behave like any other Topic: editable and deletable. Editing a seed
  * Topic changes only the stored copy, never this file.
  *
- * Each entry needs: id, name, description, pains[]. The `seed: true` flag is
- * used only for a small "starter" label in the UI. createdAt / updatedAt are
+ * Each entry: id, name, description (What we sell + Problem), pains[] (core
+ * pain(s), in the audience's words), reframe (core reframe). The `seed: true`
+ * flag drives the small "starter" label in the UI. createdAt / updatedAt are
  * filled in by storage.js when the seeds are first written.
  */
 window.SEED_TOPICS = [
   {
-    id: "seed-freelance-invoicing",
+    id: "seed-respect",
     seed: true,
-    name: "Freelance invoicing",
-    description:
-      "Independent freelancers who send invoices manually after each project. They track what is owed in spreadsheets or in their head, and chase late payments over email.",
-    pains: [
-      "I finish the work but forget to send the invoice for days",
-      "I never know how much money is actually owed to me right now",
-      "Chasing late payers makes me feel like a nuisance",
-      "Reconciling who paid what at month-end eats a whole evening",
-    ],
+    name: "Respect",
+    description: `What we sell:
+RiseGuide as a tool that changes how people are perceived — not through appearance or job title, but through how they speak.
+
+Problem:
+People do everything right — work, prepare, know the material — but people don't listen, interrupt them, ignore their ideas. They don't understand why. The answer is not what they say, but how they say it.`,
+    pains: ["I said it. Nobody reacted. He said the same thing. The room stopped."],
+    reframe: "Respect isn't earned by working harder. It's signaled in the first sentence.",
   },
   {
-    id: "seed-weight-loss",
+    id: "seed-first-impression",
     seed: true,
-    name: "Weight loss",
-    description:
-      "People who have tried many diets and lost then regained weight. They believe their failure is due to a lack of willpower and feel guilty about it.",
-    pains: [
-      "I always start strong and fall off after two weeks",
-      "I feel like I'm just not disciplined enough",
-      "Every diet works for a while and then stops",
-      "I'm tired of starting over every Monday",
-    ],
+    name: "First impression",
+    description: `What we sell:
+RiseGuide as first-sentence training — what comes out of your mouth in the first 8 seconds.
+
+Problem:
+People open with "Hi, I'm..." / "nice to meet you too" / "so, what do you do?" and become one of forty. The room doesn't remember them.`,
+    pains: ["I meet people. They never remember me."],
+    reframe:
+      "Your name is not an introduction. It's an ID check. The first impression is made in the question you ask — not the name you give.",
   },
   {
-    id: "seed-learning-a-language",
+    id: "seed-career",
     seed: true,
-    name: "Learning a language",
-    description:
-      "Adults learning a second language on their own with apps and courses. They study on and off for years without reaching conversational fluency.",
-    pains: [
-      "I've been 'learning' for years and still can't hold a conversation",
-      "I know grammar rules but freeze when someone speaks to me",
-      "I lose my streak and my motivation collapses",
-      "I don't know if what I'm doing is actually working",
-    ],
+    name: "Career",
+    description: `What we sell:
+RiseGuide as a career tool for people stuck at one level not because they lack experience, but because of an articulation gap.
+
+Problem:
+Competent, experienced people prepare, but a colleague with less experience gets the promotion, credit for the idea, CEO attention. The answer is articulation gap.`,
+    pains: ["Same idea. Different sentence. He got promoted. I got a thank-you email."],
+    reframe:
+      "You don't get promoted for what you know. You get promoted for how you sound saying it.",
   },
   {
-    id: "seed-b2b-cold-email",
+    id: "seed-job-seekers",
     seed: true,
-    name: "B2B cold email",
-    description:
-      "Founders and sales reps at small B2B companies who send cold outbound email to book meetings. They copy templates from the internet and get almost no replies.",
-    pains: [
-      "My open rates look fine but nobody replies",
-      "Every email I send sounds like every other cold email",
-      "I don't know if the problem is the list, the copy, or the offer",
-      "Following up feels like begging",
-    ],
+    name: "Job seekers",
+    description: `What we sell:
+RiseGuide as interview-prep training focused on drilling articulation under pressure, not memorizing answers.
+
+Problem:
+Strong CV, weeks of preparation, then blank / rambling / CV recital in the interview. Ends with "we'll be in touch."`,
+    pains: ["34 rejections. My CV is strong. I still don't know why I keep losing."],
+    reframe:
+      "Your résumé got you in the room. Your sentences get you the job. Qualified isn't hired. Articulate is.",
   },
   {
-    id: "seed-personal-budgeting",
+    id: "seed-silent-underachievers",
     seed: true,
-    name: "Personal budgeting",
-    description:
-      "People in their 20s and 30s who want to save money but have never kept a budget for more than a month. They feel anxious checking their bank balance.",
+    name: "Silent underachievers",
+    description: `What we sell:
+RiseGuide as a tool for people who know the answer but cannot say it because of an articulation gap.
+
+Problem:
+Smart, prepared people freeze under pressure. Mind goes blank. Later they think of the perfect answer in the car. For years.`,
     pains: [
-      "I set up a budget every January and abandon it by February",
-      "Money disappears and I can't say where it went",
-      "I avoid looking at my account because it stresses me out",
-      "I earn more than I used to but I'm not saving any more than before",
+      "I knew exactly what to say. I said nothing. Again.",
+      "I leave every meeting replaying what I should have said.",
     ],
+    reframe:
+      "Knowing and saying are two different skills. You only trained one. Pressure erases scripts. It doesn't erase drilled reflexes.",
+  },
+  {
+    id: "seed-nice-girl-good-boy",
+    seed: true,
+    name: "Nice girl / good boy",
+    description: `What we sell:
+RiseGuide as a tool for people everyone likes but nobody promotes because their language signals "optional" instead of "essential."
+
+Problem:
+Polite, team players, never confrontational — and therefore stuck. Ideas are softened to death. They apologize before every question. HR says "great attitude" but doesn't promote them.`,
+    pains: [
+      "I'm everyone's favorite. And nobody's choice.",
+      '"She\'s so sweet." = She stays where she is.',
+    ],
+    reframe:
+      "Nice isn't kind. It's invisible. 'Sorry, quick thought' is not politeness. It's a signal that your idea is optional.",
+  },
+  {
+    id: "seed-public-speaking",
+    seed: true,
+    name: "Public speaking / presentations",
+    description: `What we sell:
+RiseGuide as a presentation drill tool for people who memorize and then blank, ramble, or lose the room after the first sentence.
+
+Problem:
+Hours of preparation — slides, notes, rehearsal — and still get "send us the deck offline." Or blank on the first question. Or say "does that make sense?" at the end and undo everything.`,
+    pains: [
+      "I rehearsed for three weeks. I froze on slide four.",
+      "They said 'send me the deck offline.' Again.",
+    ],
+    reframe:
+      "Memorization protects nothing. Reps do. The boardroom isn't testing your slides. It's testing your first sentence.",
+  },
+  {
+    id: "seed-small-talk",
+    seed: true,
+    name: "Small talk",
+    description: `What we sell:
+RiseGuide as a small-talk drill tool for people who default to "big line huh" / "nice weather" / "so what do you do?" and remain invisible at every event.
+
+Problem:
+Networking event, dinner, party — either stand in the corner or do autopilot small talk nobody remembers. Leave with no new contacts.`,
+    pains: [
+      "I go to every event. I leave knowing nobody new.",
+      "I said 'nice to meet you too.' She won't remember me tomorrow.",
+    ],
+    reframe:
+      "Small talk isn't filling silence. It's reading the room. The question you ask in the first 8 seconds decides if they remember you by Monday.",
   },
 ];

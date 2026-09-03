@@ -264,7 +264,6 @@
         <div>
           <div class="list-head">
             <h1>Topics</h1>
-            <button class="btn btn-primary btn-sm" data-action="add-topic">Add Topic</button>
           </div>
           <input class="search" id="topics-search" type="search"
                  placeholder="Search topics…" value="${esc(state.topicsSearch)}" />
@@ -291,7 +290,7 @@
           </div>
         </div>
         <div class="panel">
-          ${selected ? topicDetailHTML(selected) : `<div class="empty">Select a topic to read it, or add a new one.</div>`}
+          ${selected ? topicDetailHTML(selected) : `<div class="empty">Select a topic to read it.</div>`}
         </div>
       </div>
     `;
@@ -308,14 +307,8 @@
     return `
       <div class="detail-head">
         <h1>${esc(t.name || "(unnamed)")}</h1>
-        <div class="detail-actions">
-          <button class="btn btn-sm" data-action="edit-topic" data-id="${esc(t.id)}">Edit</button>
-          <button class="btn btn-sm btn-danger" data-action="delete-topic" data-id="${esc(t.id)}">Delete</button>
-        </div>
       </div>
-      <div class="detail-meta">
-        ${t.seed ? "Starter topic · " : ""}Created ${esc(fmtDate(t.createdAt))} · Updated ${esc(fmtDate(t.updatedAt))}
-      </div>
+      <div class="detail-meta">Shared topic library · read-only</div>
       <div class="field-label">Description</div>
       <div>${esc(t.description || "—")}</div>
       <div class="field-label">Pains</div>
@@ -689,65 +682,6 @@
     });
   }
 
-  function topicForm(existing) {
-    const painsText = existing && Array.isArray(existing.pains) ? existing.pains.join("\n") : "";
-    return `
-      <div class="form-row">
-        <label for="f-name">Name</label>
-        <input type="text" id="f-name" value="${esc(existing ? existing.name : "")}" />
-      </div>
-      <div class="form-row">
-        <label for="f-desc">Description</label>
-        <textarea id="f-desc" rows="4">${esc(existing ? existing.description : "")}</textarea>
-      </div>
-      <div class="form-row">
-        <label for="f-pains">Pains — one per line</label>
-        <textarea id="f-pains" rows="7">${esc(painsText)}</textarea>
-        <div class="hint">The audience's problems, in their own words.</div>
-      </div>
-    `;
-  }
-
-  function openTopicForm(existing) {
-    openModal(existing ? "Edit Topic" : "Add Topic", topicForm(existing), () => {
-      const name = document.getElementById("f-name").value.trim();
-      const description = document.getElementById("f-desc").value.trim();
-      const pains = document
-        .getElementById("f-pains")
-        .value.split("\n")
-        .map((p) => p.trim())
-        .filter(Boolean);
-      if (!name) {
-        toast("Name is required.");
-        document.getElementById("f-name").focus();
-        return;
-      }
-      const list = Store.loadTopics();
-      if (existing) {
-        const idx = list.findIndex((t) => t.id === existing.id);
-        if (idx !== -1) {
-          list[idx] = { ...list[idx], name, description, pains, updatedAt: Store.now() };
-        }
-      } else {
-        const rec = {
-          id: Store.uid("topic"),
-          name,
-          description,
-          pains,
-          createdAt: Store.now(),
-          updatedAt: Store.now(),
-        };
-        list.push(rec);
-        state.selectedTopicId = rec.id;
-      }
-      Store.saveTopics(list);
-      reloadLibraries();
-      closeModal();
-      toast(existing ? "Topic updated." : "Topic added.");
-      render();
-    });
-  }
-
   /* ---------------- deletes ---------------- */
 
   function deleteStructure(id) {
@@ -763,23 +697,6 @@
     }
     reloadLibraries();
     toast("Structure deleted.");
-    render();
-  }
-
-  function deleteTopic(id) {
-    const t = topicById(id);
-    if (!t) return;
-    if (!confirm(`Delete topic "${t.name || "(unnamed)"}"? This cannot be undone.`)) return;
-    const list = Store.loadTopics().filter((x) => x.id !== id);
-    Store.saveTopics(list);
-    if (state.selectedTopicId === id) state.selectedTopicId = null;
-    if (state.structureRefTopicId === id) state.structureRefTopicId = "";
-    if (state.wb.topicId === id) {
-      state.wb.topicId = "";
-      clearResults();
-    }
-    reloadLibraries();
-    toast("Topic deleted.");
     render();
   }
 
@@ -810,8 +727,8 @@
         return;
       }
       const mode = confirm(
-        "Import mode:\n\nOK = MERGE (add new, update matching ids, keep everything else)\n" +
-          "Cancel = REPLACE (overwrite both libraries with the file)"
+        "Import Structures:\n\nOK = MERGE (add new structures, update ones with matching ids)\n" +
+          "Cancel = REPLACE (overwrite the Structures library with the file)"
       )
         ? "merge"
         : "replace";
@@ -820,11 +737,9 @@
         reloadLibraries();
         render();
         if (res.mode === "replace") {
-          toast(`Replaced: ${res.structures} structures, ${res.topics} topics.`);
+          toast(`Replaced: ${res.structures} structures.`);
         } else {
-          toast(
-            `Merged: +${res.sAdded}/~${res.sUpdated} structures, +${res.tAdded}/~${res.tUpdated} topics.`
-          );
+          toast(`Merged: +${res.sAdded} / ~${res.sUpdated} structures.`);
         }
       } catch (e) {
         toast("Import failed: " + e.message);
@@ -861,18 +776,9 @@
         deleteStructure(id);
         break;
 
-      case "add-topic":
-        openTopicForm(null);
-        break;
       case "open-topic":
         state.selectedTopicId = id;
         renderTopics();
-        break;
-      case "edit-topic":
-        openTopicForm(topicById(id));
-        break;
-      case "delete-topic":
-        deleteTopic(id);
         break;
 
       case "wb-mode":
