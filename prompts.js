@@ -2,7 +2,7 @@
  *
  * These instructions are an internal implementation detail. They are never sent
  * to the browser and never shown to the user — the product output is the
- * generated headlines only.
+ * generated headlines / scenes only.
  */
 
 "use strict";
@@ -90,9 +90,46 @@ ${painsBlock(topic.pains)}
 Output only the ${count} headlines, numbered 1 to ${count}, one per line. Nothing else — no introduction, no closing line, no notes, no analysis.`;
 }
 
+function sceneWorkflow({ structure, topic }) {
+  return `You are an expert at writing short marketing sketch scenes — dialogue-driven micro-scripts for social video.
+
+You will be given a SCENE STRUCTURE (an abstract beat pattern) and a winning reference scene. Use them as a structural blueprint to build a brand-new scene for the topic below.
+
+## Scene structure to follow
+
+<scene-structure name="${structure.title || "Untitled"}">
+${structure.content}
+</scene-structure>
+
+## Topic
+
+Name: ${topic.name}
+
+Description:
+${topic.description || "(none provided)"}
+
+Pains (the audience's problems, in their own words):
+${painsBlock(topic.pains)}
+
+## What to produce
+
+- ONE new scene. Not a rewrite of the reference — new characters, a new setting, new dialogue.
+- Preserve the reference's beat sequence and mechanics exactly: the same opener, the diagnosis, the second attempt, the escalation of stakes, the product reveal, the close. The turn lands at the same point. The underlying persuasive mechanism is identical.
+- Adapt the characters, setting, conflict, dialogue, stakes, and product messaging to this topic and its pains. The situation must dramatize this specific audience's problem.
+- Do NOT copy the reference's wording, character names, lines, or specifics. Nothing from the reference's own scenario carries over.
+- The product is RiseGuide (articulation training, 9 minutes a day, 28 days). Keep it, but frame the pitch around this topic's pain.
+- Do NOT invent statistics, customer counts, results, testimonials, or numbers beyond the 9-minutes / 28-days mechanic.
+- Format as a script: character-name or role labels with their lines, plus minimal stage directions in parentheses. Blank lines between speakers are fine.
+
+## Output
+
+Output the scene only. No title, no preamble, no explanation, no notes, no commentary about the structure.`;
+}
+
 function assemblePrompt(workflow, data) {
   if (workflow === "A") return workflowA(data);
   if (workflow === "B") return workflowB(data);
+  if (workflow === "SCENE") return sceneWorkflow(data);
   throw new Error("Unknown workflow: " + workflow);
 }
 

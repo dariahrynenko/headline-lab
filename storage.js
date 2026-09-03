@@ -87,6 +87,7 @@ window.Store = (function () {
     const example = s.example || "";
     return {
       id: s.id || uid(idPrefix),
+      type: s.type || (idPrefix === "scene" ? "scene" : "headline"),
       pattern,
       example,
       title: s.title || pattern,

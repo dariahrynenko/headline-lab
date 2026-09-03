@@ -46,7 +46,8 @@ const ROOT = __dirname;
 
 const MODEL = "claude-sonnet-5"; // verified against platform.claude.com/docs (Models overview)
 const ANTHROPIC_VERSION = "2023-06-01";
-const MAX_TOKENS = 4000;
+const MAX_TOKENS = 4000; // headlines
+const SCENE_MAX_TOKENS = 8000; // one full dialogue scene
 const HEADLINE_COUNT = 10;
 
 const STATIC_TYPES = {
@@ -96,17 +97,20 @@ async function handleGenerate(req, res) {
   }
 
   const workflow = body.workflow;
-  if (workflow !== "A" && workflow !== "B") {
+  if (workflow !== "A" && workflow !== "B" && workflow !== "SCENE") {
     return sendJson(res, 400, { error: "Unknown workflow." });
   }
+  const isScene = workflow === "SCENE";
 
   const topic = body.topic;
   if (!topic || typeof topic.name !== "string" || !topic.name.trim()) {
     return sendJson(res, 400, { error: "A topic is required." });
   }
-  if (workflow === "A") {
+  if (workflow === "A" || workflow === "SCENE") {
     if (!body.structure || typeof body.structure.content !== "string" || !body.structure.content.trim()) {
-      return sendJson(res, 400, { error: "A structure is required." });
+      return sendJson(res, 400, {
+        error: isScene ? "A scene structure is required." : "A structure is required.",
+      });
     }
   } else {
     if (typeof body.referenceHeadline !== "string" || !body.referenceHeadline.trim()) {
@@ -144,7 +148,7 @@ async function handleGenerate(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: MAX_TOKENS,
+        max_tokens: isScene ? SCENE_MAX_TOKENS : MAX_TOKENS,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -185,10 +189,16 @@ async function handleGenerate(req, res) {
     .trim();
 
   if (!text) {
-    return sendJson(res, 502, { error: "Claude returned no headlines. Try again." });
+    return sendJson(res, 502, {
+      error: isScene ? "Claude returned no scene. Try again." : "Claude returned no headlines. Try again.",
+    });
   }
 
-  sendJson(res, 200, { headlines: parseHeadlines(text) });
+  if (isScene) {
+    sendJson(res, 200, { scenes: [text] });
+  } else {
+    sendJson(res, 200, { headlines: parseHeadlines(text) });
+  }
 }
 
 /* ---------- static files ---------- */

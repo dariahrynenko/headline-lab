@@ -29,7 +29,8 @@
       structureId: "",
       topicId: "",
       referenceHeadline: "",
-      results: null, // string[] of generated headlines, or null
+      results: null, // string[] — generated headlines, or [sceneText]
+      resultsKind: "headlines", // "headlines" | "scenes" — what `results` holds
       error: null, // error message string, or null
       loading: false,
     },
@@ -544,11 +545,13 @@
 
     if (barActions) barActions.innerHTML = "";
 
+    const sceneMode = wb.mode === "A" && wbStructureKind() === "scenes";
+
     if (wb.loading) {
       box.innerHTML = `
         <div class="results-loading">
           <span class="spinner"></span>
-          <span>Generating headlines…</span>
+          <span>Generating ${sceneMode ? "your scene" : "headlines"}…</span>
         </div>`;
       return;
     }
@@ -557,9 +560,22 @@
       return;
     }
     if (!wb.results || !wb.results.length) {
-      const noun =
-        wb.mode === "A" && wbStructureKind() === "scenes" ? "scenes" : "headlines";
-      box.innerHTML = `<div class="results-empty">Your generated ${noun} will appear here.</div>`;
+      box.innerHTML = `<div class="results-empty">Your generated ${
+        sceneMode ? "scene" : "headlines"
+      } will appear here.</div>`;
+      return;
+    }
+
+    if (wb.resultsKind === "scenes") {
+      if (barActions) {
+        barActions.innerHTML = `
+          <button class="btn btn-ghost btn-sm" data-action="wb-copy-text">Copy scene</button>
+          <button class="btn btn-ghost btn-sm" data-action="wb-regenerate">Regenerate</button>
+        `;
+      }
+      box.innerHTML = wb.results
+        .map((sceneText) => `<div class="detail-body">${esc(sceneText)}</div>`)
+        .join("");
       return;
     }
 
@@ -591,19 +607,12 @@
     if (!canGenerate() || state.wb.loading) return;
     const wb = state.wb;
 
-    // Keep the selected mode consistent with the output. Scene generation is not
-    // wired up yet (and the scene library is empty), so Scenes mode never
-    // produces headlines.
-    if (wb.mode === "A" && wbStructureKind() === "scenes") {
-      wb.results = null;
-      wb.error = "Scene generation is not available yet.";
-      renderResults();
-      return;
-    }
+    const isScene = wb.mode === "A" && wbStructureKind() === "scenes";
 
     wb.loading = true;
     wb.error = null;
     wb.results = null;
+    wb.resultsKind = isScene ? "scenes" : "headlines";
 
     const btn = document.querySelector('[data-action="wb-generate"]');
     if (btn) btn.disabled = true;
@@ -611,13 +620,12 @@
 
     const topic = topicById(wb.topicId);
     const payload = {
-      workflow: wb.mode,
+      workflow: isScene ? "SCENE" : wb.mode,
       topic: { name: topic.name, description: topic.description, pains: topic.pains },
     };
     if (wb.mode === "A") {
       const s = wbSelectedStructure();
       payload.structure = { title: s.title, content: s.content };
-      payload.kind = "headlines";
     } else {
       payload.referenceHeadline = wb.referenceHeadline.trim();
     }
@@ -629,12 +637,15 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
+      const items = isScene ? data.scenes : data.headlines;
       if (!res.ok) {
         wb.error = data.error || "Generation failed. Try again.";
-      } else if (Array.isArray(data.headlines) && data.headlines.length) {
-        wb.results = data.headlines;
+      } else if (Array.isArray(items) && items.length) {
+        wb.results = items;
       } else {
-        wb.error = "Claude returned no headlines. Try again.";
+        wb.error = isScene
+          ? "Claude returned no scene. Try again."
+          : "Claude returned no headlines. Try again.";
       }
     } catch (e) {
       wb.error = "Generation service is not running. Start the server and try again.";
@@ -785,8 +796,11 @@
         break;
       case "wb-copy-text":
         (async () => {
-          const ok = await copyText((state.wb.results || []).join("\n"));
-          toast(ok ? "All headlines copied." : "Copy failed — select the text manually.");
+          const wb = state.wb;
+          const sep = wb.resultsKind === "scenes" ? "\n\n" : "\n";
+          const ok = await copyText((wb.results || []).join(sep));
+          const label = wb.resultsKind === "scenes" ? "Scene copied." : "All headlines copied.";
+          toast(ok ? label : "Copy failed — select the text manually.");
         })();
         break;
       case "wb-copy-one": {
