@@ -133,4 +133,129 @@ function assemblePrompt(workflow, data) {
   throw new Error("Unknown workflow: " + workflow);
 }
 
-module.exports = { assemblePrompt };
+/* ---------- Compliance Checker ---------- */
+
+// Source of truth for the compliance checker. Risk assessment, not legal advice.
+const COMPLIANCE_RULES = `This is a RISK assessment, not a determination that something is legal or illegal. Always use LOW / MEDIUM / HIGH risk language.
+
+HIGH RISK
+- Health claims. Example: "Overcome social anxiety." Safer: "feel less anxious" / "learn techniques to feel less anxious". Health claims require competent and reliable scientific evidence.
+- Specific career outcome claims. Examples: "got promoted", "I got the VP offer", "got headhunted for a director role", "the offer's mine", "next time I'm in that room".
+- Timeframes tied to outcomes. Examples: "in 28 days", "day 7", "in a month" — especially when the timeframe implies a promised result.
+- Comparative claims requiring objective evidence. Examples: "communicate better than most people your age", "reading books wastes time for anyone over 20".
+
+MEDIUM RISK
+- Performance claims. Examples: "you'll sound more eloquent", "speak with clarity, confidence & authority", "users improved articulation skills drastically".
+- AI-generated characters that could be mistaken for real people without disclosure. Recommended disclosure: "AI-generated content. Not a real life testimonial".
+- UGC / actors presented as real testimonials without disclosure. Recommended disclosure: "Actor Portrayal. Not a real life testimonial".
+
+LOW / CAUTION
+- False urgency. Examples: "Starting tomorrow morning", "on August 1", "LAST CHANCE" — when the product is actually available continuously.
+
+LOWER-RISK / GENERALLY SAFE (do not flag unless abused)
+- Common-sense statements. Example: "Communication skills are important for a good career."
+- Company opinion. Example: "We believe communication skills can help you get noticed by management."
+- Sequence instead of specific dates. Example: "First… Then… Before long…"
+- Puffery in moderation. Examples: "You'll own every room", "Become unrecognizable", "Make killer first impressions".
+- Addressing the user rather than making a testimonial claim.
+- Product functionality. Example: "Our app helps you train communication skills."
+- Skill development / learning claims. Examples: "you'll learn techniques…", "you'll practice…", "you can…". Evidence is the existence of the described training / content in the product.
+- Self-reported subjective experiences. Examples: "feel more confident", "feel ready to be promoted", "feel more noticed", "noticed". These require supporting user-survey evidence.
+
+KEY QUESTIONS
+1. Does the claim sound like a guarantee of an outcome?
+2. If it is a result claim, is there sufficient evidence?
+3. Can the same thing be said more safely through a skill, a product function, or a user feeling instead of a guaranteed outcome?
+
+PRINCIPLES
+- "Results not typical" does NOT automatically make an unsupported claim safe.
+- Do not assume evidence exists unless the user has provided it. Do not invent evidence.
+- If evidence would be needed, explicitly say so.`;
+
+function compliancePrompt(text) {
+  return `You are a marketing compliance risk assessor. You assess RISK (LOW / MEDIUM / HIGH), never legality.
+
+## Compliance ruleset (your source of truth)
+
+${COMPLIANCE_RULES}
+
+## Copy to assess
+
+"""
+${text}
+"""
+
+## How to assess
+
+- Find the specific phrases that create risk. Quote each one EXACTLY as it appears in the copy above (so it can be located in the text).
+- Assign each issue a category: HEALTH | CAREER_OUTCOME | TIMEFRAME | COMPARATIVE | PERFORMANCE | TESTIMONIAL_DISCLOSURE | FALSE_URGENCY | OTHER
+- Assign each issue a risk: LOW | MEDIUM | HIGH (per the ruleset).
+- Give a short reason (why it is risky) and a suggestion (how to say it more safely — usually via a skill, a product function, or a user feeling).
+- Do NOT flag phrases that fall under the generally-safe categories unless they are clearly abused.
+- overallRisk = the highest individual issue risk. If there are no issues, overallRisk is "LOW".
+- Set needsEvidence to true if any flagged claim would require evidence (scientific evidence, user surveys, objective comparison data, etc.) that has not been provided. Do not assume evidence exists. In evidenceNote, say what kind of evidence would be needed.
+
+## Output
+
+Return ONLY a single JSON object, no markdown code fences, no commentary before or after:
+
+{
+  "overallRisk": "LOW | MEDIUM | HIGH",
+  "summary": "one or two sentences",
+  "issues": [
+    { "text": "exact problematic phrase", "category": "…", "risk": "LOW | MEDIUM | HIGH", "reason": "…", "suggestion": "…" }
+  ],
+  "needsEvidence": true,
+  "evidenceNote": "what evidence would be needed, or empty string"
+}`;
+}
+
+function complianceFixPrompt(text, issues) {
+  const issuesBlock =
+    Array.isArray(issues) && issues.length
+      ? issues
+          .map(
+            (i) =>
+              `- [${i.risk || "?"} / ${i.category || "?"}] "${i.text || ""}" — ${i.reason || ""}`
+          )
+          .join("\n")
+      : "(no structured issues supplied — identify and fix the risky claims yourself using the ruleset)";
+
+  return `You are a compliance-aware marketing copy editor. Rewrite the copy below to reduce compliance risk while keeping it strong.
+
+## Compliance ruleset (your source of truth)
+
+${COMPLIANCE_RULES}
+
+## Original copy
+
+"""
+${text}
+"""
+
+## Issues identified
+
+${issuesBlock}
+
+## Rewrite rules
+
+- Preserve the original angle, the core message, the hook, and the marketing intent. Keep it punchy. Do NOT turn strong copy into generic corporate language.
+- Remove or soften the risky claims: reframe outcome guarantees as a skill you build, a function the product performs, or a feeling the user has. Replace specific career-outcome claims, health claims, result-tied timeframes, and unsupported comparatives.
+- Do NOT invent evidence, statistics, testimonials, studies, or proof.
+- Do NOT weaken language that is already safe (puffery in moderation, product functionality, skill / learning claims, "you"-address, common-sense statements, company opinion, self-reported feelings).
+- For a testimonial or a realistic character that lacks disclosure: either add the recommended disclosure line, or reframe it as addressing the reader directly.
+- Keep the same format and roughly the same length (a headline stays a headline, a scene stays a scene).
+
+## Output
+
+Return ONLY a single JSON object, no markdown code fences, no commentary:
+
+{
+  "compliantText": "the rewritten copy",
+  "changes": [
+    { "original": "risky wording from the original", "replacement": "safer wording", "reason": "why it was changed" }
+  ]
+}`;
+}
+
+module.exports = { assemblePrompt, compliancePrompt, complianceFixPrompt };

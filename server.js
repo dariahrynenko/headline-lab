@@ -1,8 +1,11 @@
 /* Headline Lab — local proxy server.
  *
- * Serves the static app AND exposes one endpoint, POST /api/generate, which is
- * the only thing that talks to the Anthropic API. The API key lives here in a
- * server-side environment variable and is never sent to the browser.
+ * Serves the static app AND the /api/* endpoints, which are the only things
+ * that talk to the Anthropic API. The API key lives here in a server-side
+ * environment variable and is never sent to the browser.
+ *
+ *   POST /api/generate    — headline / scene generation
+ *   POST /api/compliance  — compliance risk assessment + compliant rewrite
  *
  * No dependencies — Node's built-in http + fetch (Node 18+).
  *
@@ -16,7 +19,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { assemblePrompt } = require("./prompts");
+const { assemblePrompt, compliancePrompt, complianceFixPrompt } = require("./prompts");
 
 /* ---------- minimal .env loader (no dependency) ---------- */
 (function loadEnv() {
@@ -48,6 +51,7 @@ const MODEL = "claude-sonnet-5"; // verified against platform.claude.com/docs (M
 const ANTHROPIC_VERSION = "2023-06-01";
 const MAX_TOKENS = 4000; // headlines
 const SCENE_MAX_TOKENS = 8000; // one full dialogue scene
+const COMPLIANCE_MAX_TOKENS = 6000; // structured risk assessment / rewrite
 const HEADLINE_COUNT = 10;
 
 const STATIC_TYPES = {
@@ -76,25 +80,102 @@ function parseHeadlines(text) {
   return numbered.length ? numbered : lines;
 }
 
-/* ---------- POST /api/generate ---------- */
-
-async function handleGenerate(req, res) {
+// Read a JSON request body (shared by the /api endpoints). Returns the parsed
+// object, or { __error } with a ready-to-send message.
+async function readJsonBody(req) {
   let raw = "";
   for await (const chunk of req) {
     raw += chunk;
-    if (raw.length > 100000) {
-      sendJson(res, 413, { error: "Request too large." });
+    if (raw.length > 200000) {
       req.destroy();
-      return;
+      return { __error: { status: 413, message: "Request too large." } };
     }
   }
-
-  let body;
   try {
-    body = JSON.parse(raw || "{}");
+    return JSON.parse(raw || "{}");
   } catch (e) {
-    return sendJson(res, 400, { error: "Invalid request." });
+    return { __error: { status: 400, message: "Invalid request." } };
   }
+}
+
+// Single place that calls the Anthropic Messages API. Returns { ok: true, text }
+// or { ok: false, status, error }. Used by every /api endpoint so the key
+// handling and error mapping stay in one place.
+async function claudeComplete(apiKey, { maxTokens, prompt }) {
+  let apiRes;
+  try {
+    apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+  } catch (e) {
+    console.error("Network error calling Anthropic:", e.message);
+    return { ok: false, status: 502, error: "Could not reach Claude. Check your connection." };
+  }
+
+  if (!apiRes.ok) {
+    let detail = "";
+    try {
+      const j = await apiRes.json();
+      detail = (j && j.error && j.error.message) || "";
+    } catch (e) {
+      /* ignore */
+    }
+    console.error("Anthropic API error", apiRes.status, detail);
+    if (apiRes.status === 401) {
+      return { ok: false, status: 502, error: "The generation service key was rejected." };
+    }
+    if (apiRes.status === 429) {
+      return { ok: false, status: 502, error: "Rate limit reached. Try again in a moment." };
+    }
+    return { ok: false, status: 502, error: "Claude is unavailable right now. Try again." };
+  }
+
+  let data;
+  try {
+    data = await apiRes.json();
+  } catch (e) {
+    return { ok: false, status: 502, error: "Claude returned an unreadable response." };
+  }
+
+  const text = (data.content || [])
+    .filter((b) => b && b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+
+  return { ok: true, text };
+}
+
+// Best-effort JSON extraction from a model response (tolerates ``` fences and
+// stray prose around the object). Returns the parsed object or null.
+function extractJson(text) {
+  let t = String(text || "").trim();
+  t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return null;
+  try {
+    return JSON.parse(t.slice(start, end + 1));
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ---------- POST /api/generate ---------- */
+
+async function handleGenerate(req, res) {
+  const body = await readJsonBody(req);
+  if (body.__error) return sendJson(res, body.__error.status, { error: body.__error.message });
 
   const workflow = body.workflow;
   if (workflow !== "A" && workflow !== "B" && workflow !== "SCENE") {
@@ -137,57 +218,13 @@ async function handleGenerate(req, res) {
     count: HEADLINE_COUNT,
   });
 
-  let apiRes;
-  try {
-    apiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: isScene ? SCENE_MAX_TOKENS : MAX_TOKENS,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-  } catch (e) {
-    console.error("Network error calling Anthropic:", e.message);
-    return sendJson(res, 502, { error: "Could not reach Claude. Check your connection." });
-  }
+  const result = await claudeComplete(apiKey, {
+    maxTokens: isScene ? SCENE_MAX_TOKENS : MAX_TOKENS,
+    prompt,
+  });
+  if (!result.ok) return sendJson(res, result.status, { error: result.error });
 
-  if (!apiRes.ok) {
-    let detail = "";
-    try {
-      const j = await apiRes.json();
-      detail = (j && j.error && j.error.message) || "";
-    } catch (e) {
-      /* ignore */
-    }
-    console.error("Anthropic API error", apiRes.status, detail);
-    if (apiRes.status === 401) {
-      return sendJson(res, 502, { error: "The generation service key was rejected." });
-    }
-    if (apiRes.status === 429) {
-      return sendJson(res, 502, { error: "Rate limit reached. Try again in a moment." });
-    }
-    return sendJson(res, 502, { error: "Claude is unavailable right now. Try again." });
-  }
-
-  let data;
-  try {
-    data = await apiRes.json();
-  } catch (e) {
-    return sendJson(res, 502, { error: "Claude returned an unreadable response." });
-  }
-
-  const text = (data.content || [])
-    .filter((b) => b && b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
-
+  const text = result.text;
   if (!text) {
     return sendJson(res, 502, {
       error: isScene ? "Claude returned no scene. Try again." : "Claude returned no headlines. Try again.",
@@ -199,6 +236,60 @@ async function handleGenerate(req, res) {
   } else {
     sendJson(res, 200, { headlines: parseHeadlines(text) });
   }
+}
+
+/* ---------- POST /api/compliance ---------- */
+
+async function handleCompliance(req, res) {
+  const body = await readJsonBody(req);
+  if (body.__error) return sendJson(res, body.__error.status, { error: body.__error.message });
+
+  const action = body.action === "fix" ? "fix" : body.action === "check" ? "check" : null;
+  if (!action) {
+    return sendJson(res, 400, { error: "Unknown action." });
+  }
+
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+  if (!text) {
+    return sendJson(res, 400, { error: "Paste some copy to check." });
+  }
+  if (text.length > 20000) {
+    return sendJson(res, 400, { error: "That's too long — keep it under 20,000 characters." });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    return sendJson(res, 503, {
+      error:
+        "ANTHROPIC_API_KEY is not configured on the server. Add it to a .env file and restart the server.",
+    });
+  }
+
+  const prompt =
+    action === "check"
+      ? compliancePrompt(text)
+      : complianceFixPrompt(text, Array.isArray(body.issues) ? body.issues : null);
+
+  const result = await claudeComplete(apiKey, { maxTokens: COMPLIANCE_MAX_TOKENS, prompt });
+  if (!result.ok) return sendJson(res, result.status, { error: result.error });
+
+  const parsed = extractJson(result.text);
+  if (!parsed) {
+    return sendJson(res, 502, { error: "Claude returned an unreadable response. Try again." });
+  }
+
+  if (action === "check") {
+    if (typeof parsed.overallRisk !== "string") {
+      return sendJson(res, 502, { error: "Claude returned an incomplete assessment. Try again." });
+    }
+    return sendJson(res, 200, { analysis: parsed });
+  }
+
+  // fix
+  if (typeof parsed.compliantText !== "string" || !parsed.compliantText.trim()) {
+    return sendJson(res, 502, { error: "Claude returned an incomplete rewrite. Try again." });
+  }
+  return sendJson(res, 200, { result: parsed });
 }
 
 /* ---------- static files ---------- */
@@ -246,9 +337,17 @@ function serveStatic(req, res) {
 /* ---------- server ---------- */
 
 const server = http.createServer((req, res) => {
-  if (req.method === "POST" && (req.url || "").split("?")[0] === "/api/generate") {
+  const route = (req.url || "").split("?")[0];
+  if (req.method === "POST" && route === "/api/generate") {
     handleGenerate(req, res).catch((e) => {
       console.error("Unexpected error in /api/generate:", e);
+      if (!res.headersSent) sendJson(res, 500, { error: "Unexpected server error." });
+    });
+    return;
+  }
+  if (req.method === "POST" && route === "/api/compliance") {
+    handleCompliance(req, res).catch((e) => {
+      console.error("Unexpected error in /api/compliance:", e);
       if (!res.headersSent) sendJson(res, 500, { error: "Unexpected server error." });
     });
     return;

@@ -696,3 +696,120 @@ img { max-width: 100%; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 ::selection { background: rgba(168, 85, 247, 0.32); }
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+/* ---------- Compliance Checker ---------- */
+:root {
+  --risk-low: #6f9f7a;
+  --risk-med: #d9a24a;
+  --risk-high: #f0616d;
+}
+
+.cc-textarea {
+  width: 100%;
+  min-height: 170px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 14px;
+  resize: vertical;
+}
+.cc-textarea::placeholder { color: var(--text-faint); }
+.cc-textarea:hover { border-color: var(--border-strong); }
+.cc-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.cc-cta { display: flex; align-items: center; gap: 14px; margin: 16px 0 6px; }
+.cc-disclaimer { color: var(--text-faint); font-size: 12.5px; margin-top: 4px; }
+
+.cc-results { border-top: 1px solid var(--border-soft); margin-top: 26px; padding-top: 24px; }
+
+.cc-riskbar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.cc-risk {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.cc-risk.low { color: var(--risk-low); }
+.cc-risk.med { color: var(--risk-med); }
+.cc-risk.high { color: var(--risk-high); }
+.cc-summary { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin-bottom: 4px; }
+
+.cc-mark { border-radius: 3px; padding: 0 2px; color: var(--text); }
+.cc-mark.low { background: rgba(111, 159, 122, 0.28); box-shadow: inset 0 -2px 0 var(--risk-low); }
+.cc-mark.med { background: rgba(217, 162, 74, 0.26); box-shadow: inset 0 -2px 0 var(--risk-med); }
+.cc-mark.high { background: rgba(240, 97, 109, 0.24); box-shadow: inset 0 -2px 0 var(--risk-high); }
+
+.cc-issues { display: flex; flex-direction: column; gap: 8px; }
+.cc-issue {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+}
+.cc-issue.low { border-left-color: var(--risk-low); }
+.cc-issue.med { border-left-color: var(--risk-med); }
+.cc-issue.high { border-left-color: var(--risk-high); }
+.cc-issue-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.cc-issue-phrase {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text);
+}
+.cc-issue-line { font-size: 13px; color: var(--text-dim); line-height: 1.55; margin-top: 3px; }
+.cc-issue-line b { color: var(--text); font-weight: 600; }
+
+.cc-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface-3);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.cc-tag.risk-low { color: var(--risk-low); }
+.cc-tag.risk-med { color: var(--risk-med); }
+.cc-tag.risk-high { color: var(--risk-high); }
+
+.cc-note {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+.cc-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .cc-compare { grid-template-columns: 1fr; } }
+.cc-compare .detail-body { margin-top: 6px; }
+
+.cc-changes { display: flex; flex-direction: column; gap: 8px; }
+.cc-change {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.cc-change .from { color: var(--risk-high); text-decoration: line-through; }
+.cc-change .to { color: var(--text); }
+.cc-change .why { color: var(--text-faint); margin-top: 4px; }

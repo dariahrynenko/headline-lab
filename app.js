@@ -34,6 +34,15 @@
       error: null, // error message string, or null
       loading: false,
     },
+
+    cc: {
+      input: "", // current textarea value (the original — never overwritten)
+      analyzedText: "", // frozen copy of `input` at the moment Check was run
+      analysis: null, // { overallRisk, summary, issues[], needsEvidence, evidenceNote }
+      compliant: null, // { compliantText, changes[] }
+      error: null,
+      loading: null, // null | "check" | "fix"
+    },
   };
 
   function reloadLibraries() {
@@ -116,6 +125,7 @@
     });
     if (state.tab === "structures") renderStructures();
     else if (state.tab === "topics") renderTopics();
+    else if (state.tab === "compliance") renderCompliance();
     else renderGenerator();
   }
 
@@ -657,6 +667,250 @@
     }
   }
 
+  /* ---------------- Compliance Checker ---------------- */
+
+  const RISK_CLASS = { LOW: "low", MEDIUM: "med", HIGH: "high" };
+
+  function riskCls(r) {
+    return RISK_CLASS[String(r || "").toUpperCase()] || "med";
+  }
+
+  function higherRisk(a, b) {
+    const order = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+    return (order[a] || 0) >= (order[b] || 0) ? a : b;
+  }
+
+  // Wrap each issue's exact phrase in the analysed text with a coloured <mark>.
+  // Works on plain-text index ranges so <mark> tags never nest or break.
+  function highlightIssues(text, issues) {
+    const ranges = [];
+    for (const iss of issues || []) {
+      const needle = String(iss.text || "").trim();
+      if (needle.length < 2) continue;
+      const hay = text.toLowerCase();
+      const n = needle.toLowerCase();
+      let from = 0;
+      let idx;
+      while ((idx = hay.indexOf(n, from)) !== -1) {
+        ranges.push({ start: idx, end: idx + needle.length, risk: String(iss.risk || "MEDIUM").toUpperCase() });
+        from = idx + needle.length;
+      }
+    }
+    if (!ranges.length) return esc(text);
+    ranges.sort((a, b) => a.start - b.start || b.end - a.end);
+    const merged = [];
+    for (const r of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && r.start < last.end) {
+        last.end = Math.max(last.end, r.end);
+        last.risk = higherRisk(last.risk, r.risk);
+      } else {
+        merged.push({ ...r });
+      }
+    }
+    let out = "";
+    let cur = 0;
+    for (const r of merged) {
+      out += esc(text.slice(cur, r.start));
+      out += `<mark class="cc-mark ${riskCls(r.risk)}">${esc(text.slice(r.start, r.end))}</mark>`;
+      cur = r.end;
+    }
+    out += esc(text.slice(cur));
+    return out;
+  }
+
+  function renderCompliance() {
+    const cc = state.cc;
+    view.innerHTML = `
+      <header class="page-hero">
+        <h1>Compliance Checker</h1>
+        <p class="page-sub">Risk assessment for marketing copy — headlines, scenes, ad copy. This is a LOW / MEDIUM / HIGH risk signal, not a determination that something is legal or illegal.</p>
+      </header>
+
+      <span class="field-label">Copy to check</span>
+      <textarea id="cc-input" class="cc-textarea" placeholder="Paste your headline, scene, or ad copy…">${esc(cc.input)}</textarea>
+
+      <div class="cc-cta">
+        <button class="btn-generate" data-action="cc-check" ${cc.input.trim() ? "" : "disabled"}>Check compliance</button>
+        <span class="cc-disclaimer">Nothing you paste is stored. Your original text is never overwritten.</span>
+      </div>
+
+      <section class="cc-results" id="cc-results"></section>
+    `;
+
+    const ta = document.getElementById("cc-input");
+    ta.addEventListener("input", () => {
+      state.cc.input = ta.value;
+      const btn = document.querySelector('[data-action="cc-check"]');
+      if (btn) btn.disabled = !ta.value.trim();
+    });
+
+    renderComplianceResults();
+  }
+
+  function renderComplianceResults() {
+    const box = document.getElementById("cc-results");
+    if (!box) return;
+    const cc = state.cc;
+
+    if (cc.loading === "check") {
+      box.innerHTML = `<div class="results-loading"><span class="spinner"></span><span>Assessing compliance risk…</span></div>`;
+      return;
+    }
+    if (cc.error) {
+      box.innerHTML = `<div class="results-error">${esc(cc.error)}</div>`;
+      return;
+    }
+    if (!cc.analysis) {
+      box.innerHTML = "";
+      return;
+    }
+
+    const a = cc.analysis;
+    const issues = Array.isArray(a.issues) ? a.issues : [];
+    const overall = String(a.overallRisk || "LOW").toUpperCase();
+
+    const issuesHTML = issues.length
+      ? issues
+          .map((iss) => {
+            const rc = riskCls(iss.risk);
+            return `
+        <div class="cc-issue ${rc}">
+          <div class="cc-issue-head">
+            <span class="cc-issue-phrase">“${esc(iss.text || "")}”</span>
+            <span class="cc-tag">${esc(iss.category || "OTHER")}</span>
+            <span class="cc-tag risk-${rc}">${esc(String(iss.risk || "").toUpperCase())} risk</span>
+          </div>
+          <div class="cc-issue-line"><b>Why it's risky:</b> ${esc(iss.reason || "")}</div>
+          <div class="cc-issue-line"><b>Make it safer:</b> ${esc(iss.suggestion || "")}</div>
+        </div>`;
+          })
+          .join("")
+      : `<div class="cc-note">No phrases were flagged against the compliance ruleset.</div>`;
+
+    const evidenceHTML =
+      a.needsEvidence && String(a.evidenceNote || "").trim()
+        ? `<div class="cc-note"><b>Evidence needed:</b> ${esc(a.evidenceNote)}</div>`
+        : "";
+
+    let compliantHTML = "";
+    if (cc.loading === "fix") {
+      compliantHTML = `<div class="results-loading"><span class="spinner"></span><span>Writing a compliant version…</span></div>`;
+    } else if (cc.compliant) {
+      const changes = Array.isArray(cc.compliant.changes) ? cc.compliant.changes : [];
+      compliantHTML = `
+        <div class="cc-compare">
+          <div>
+            <span class="field-label">Original</span>
+            <div class="detail-body">${esc(cc.analyzedText)}</div>
+          </div>
+          <div>
+            <span class="field-label">Compliant version</span>
+            <div class="detail-body">${esc(cc.compliant.compliantText)}</div>
+            <div class="cc-cta"><button class="btn btn-sm" data-action="cc-copy">Copy compliant version</button></div>
+          </div>
+        </div>
+        ${
+          changes.length
+            ? `<span class="field-label" style="display:block;margin-top:16px">What changed</span>
+               <div class="cc-changes">
+                 ${changes
+                   .map(
+                     (ch) => `
+                   <div class="cc-change">
+                     <span class="from">${esc(ch.original || "")}</span> → <span class="to">${esc(ch.replacement || "")}</span>
+                     <div class="why">${esc(ch.reason || "")}</div>
+                   </div>`
+                   )
+                   .join("")}
+               </div>`
+            : ""
+        }`;
+    } else {
+      compliantHTML = `<div class="cc-cta"><button class="btn btn-primary" data-action="cc-fix">Make compliant</button></div>`;
+    }
+
+    box.innerHTML = `
+      <div class="cc-riskbar">
+        <span class="cc-risk ${riskCls(overall)}">${esc(overall)} risk</span>
+      </div>
+      <p class="cc-summary">${esc(a.summary || "")}</p>
+
+      <span class="field-label" style="display:block;margin-top:14px">Your copy — flagged phrases highlighted</span>
+      <div class="detail-body">${highlightIssues(cc.analyzedText, issues)}</div>
+
+      <span class="field-label" style="display:block;margin-top:16px">Issues (${issues.length})</span>
+      <div class="cc-issues">${issuesHTML}</div>
+      ${evidenceHTML}
+      <div class="cc-note">Risk assessment only — not a determination that this copy is legal or illegal, and not legal advice.</div>
+
+      <span class="field-label" style="display:block;margin-top:20px">Compliant rewrite</span>
+      ${compliantHTML}
+    `;
+  }
+
+  async function runComplianceCheck() {
+    const cc = state.cc;
+    const text = cc.input.trim();
+    if (!text || cc.loading) return;
+    cc.loading = "check";
+    cc.error = null;
+    cc.analysis = null;
+    cc.compliant = null;
+    cc.analyzedText = text;
+    const btn = document.querySelector('[data-action="cc-check"]');
+    if (btn) btn.disabled = true;
+    renderComplianceResults();
+
+    try {
+      const res = await fetch("/api/compliance", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "check", text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) cc.error = data.error || "Check failed. Try again.";
+      else if (data.analysis) cc.analysis = data.analysis;
+      else cc.error = "Claude returned an incomplete assessment. Try again.";
+    } catch (e) {
+      cc.error = "Compliance service is not running. Start the server and try again.";
+    } finally {
+      cc.loading = null;
+      const b = document.querySelector('[data-action="cc-check"]');
+      if (b) b.disabled = !cc.input.trim();
+      renderComplianceResults();
+    }
+  }
+
+  async function runComplianceFix() {
+    const cc = state.cc;
+    if (!cc.analysis || !cc.analyzedText || cc.loading) return;
+    cc.loading = "fix";
+    cc.error = null;
+    renderComplianceResults();
+
+    try {
+      const res = await fetch("/api/compliance", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "fix",
+          text: cc.analyzedText,
+          issues: Array.isArray(cc.analysis.issues) ? cc.analysis.issues : [],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) cc.error = data.error || "Rewrite failed. Try again.";
+      else if (data.result && data.result.compliantText) cc.compliant = data.result;
+      else cc.error = "Claude returned an incomplete rewrite. Try again.";
+    } catch (e) {
+      cc.error = "Compliance service is not running. Start the server and try again.";
+    } finally {
+      cc.loading = null;
+      renderComplianceResults();
+    }
+  }
+
   /* ---------------- modal / forms ---------------- */
 
   const overlay = document.getElementById("modal-overlay");
@@ -813,6 +1067,21 @@
         }
         break;
       }
+
+      case "cc-check":
+        runComplianceCheck();
+        break;
+      case "cc-fix":
+        runComplianceFix();
+        break;
+      case "cc-copy":
+        (async () => {
+          const t = state.cc.compliant && state.cc.compliant.compliantText;
+          if (!t) return;
+          const ok = await copyText(t);
+          toast(ok ? "Compliant version copied." : "Copy failed — select the text manually.");
+        })();
+        break;
     }
   });
 
