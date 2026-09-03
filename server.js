@@ -37,8 +37,11 @@ const { assemblePrompt } = require("./prompts");
   }
 })();
 
-const HOST = "127.0.0.1";
-const PORT = Number(process.env.PORT) || 8000;
+// Bind to 0.0.0.0 so hosted platforms (e.g. Render) can route traffic to the
+// container; locally this is still reachable as 127.0.0.1 / localhost.
+const HOST = "0.0.0.0";
+const PORT = Number(process.env.PORT) || 10000;
+const DISPLAY_HOST = HOST === "0.0.0.0" ? "127.0.0.1" : HOST;
 const ROOT = __dirname;
 
 const MODEL = "claude-sonnet-5"; // verified against platform.claude.com/docs (Models overview)
@@ -244,7 +247,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Headline Lab running at http://${HOST}:${PORT}`);
+  console.log(`Headline Lab running at http://${DISPLAY_HOST}:${PORT} (listening on ${HOST}:${PORT})`);
   if (!process.env.ANTHROPIC_API_KEY || !process.env.ANTHROPIC_API_KEY.trim()) {
     console.log(
       "WARNING: ANTHROPIC_API_KEY is not set — the library works, but Generate will return " +
