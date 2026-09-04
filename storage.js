@@ -53,23 +53,23 @@ window.Store = (function () {
 
   /* ---------- Structures (canonical, read-only) ---------- */
 
-  // Structures come straight from seed-structures.js on every call — never from
-  // localStorage. `title` and `content` are derived from pattern/example so the
-  // existing list, detail, and generator UI keep working unchanged.
+  // Headline structures come straight from seed-structures.js on every call —
+  // never from localStorage. Each is a full mechanism specification;
+  // normalizeHeadlineStructure() derives title / example / content and passes
+  // the complete spec block to Workflow A as {{structure.content}}.
   function loadStructures() {
     try {
       localStorage.removeItem(K_STRUCTURES);
     } catch (e) {
       /* ignore */
     }
-    return (window.SEED_STRUCTURES || []).map((s) => normalizeStructure(s, "structure"));
+    return (window.SEED_STRUCTURES || []).map((s) => normalizeHeadlineStructure(s));
   }
 
   /* ---------- Scenes (canonical, read-only) ---------- */
 
-  // Scene structures come straight from seed-scenes.js on every call — same
-  // model and normalization as loadStructures(). Empty until canonical scene
-  // structures are added to seed-scenes.js.
+  // Scene structures come straight from seed-scenes.js on every call. They use
+  // the simpler pattern/example shape; normalizeStructure() handles them.
   function loadScenes() {
     try {
       localStorage.removeItem(K_SCENES);
@@ -79,8 +79,7 @@ window.Store = (function () {
     return (window.SEED_SCENES || []).map((s) => normalizeStructure(s, "scene"));
   }
 
-  // Shared normalization for headline structures and scene structures: derives
-  // `title` / `content` from pattern / example (each overridable) so the
+  // pattern/example shape (scene structures). Derives title / content so the
   // existing list, detail, and generator UI keep working unchanged.
   function normalizeStructure(s, idPrefix) {
     const pattern = s.pattern || "";
@@ -92,6 +91,64 @@ window.Store = (function () {
       example,
       title: s.title || pattern,
       content: s.content || "Pattern:\n" + pattern + "\n\nWinning example:\n" + example,
+      seed: true,
+    };
+  }
+
+  // Full-specification shape (headline structures). Keeps every field separate,
+  // and builds:
+  //   title   = the structure line (dropdown / list / detail heading)
+  //   example = examples[0]        (card snippet)
+  //   content = a formatted spec block with ALL fields — this is what the
+  //             Structures-library detail panel shows AND what Workflow A
+  //             receives as {{structure.content}}.
+  function normalizeHeadlineStructure(s) {
+    const examples = Array.isArray(s.examples) ? s.examples.slice() : [];
+    const structure = s.structure || "";
+    const mechanismName = s.mechanismName || "";
+    const coreMechanism = s.coreMechanism || "";
+    const mustPreserve = s.mustPreserve || "";
+    const canChange = s.canChange || "";
+    const requiredInsight = s.requiredInsight || "";
+    const forbidden = s.forbidden || "";
+    const disclaimer = s.disclaimer || null;
+
+    const blocks = [
+      "STRUCTURE\n" + structure,
+      "MECHANISM — " + mechanismName + (coreMechanism ? "\n" + coreMechanism : ""),
+      "MUST PRESERVE\n" + mustPreserve,
+      "CAN CHANGE\n" + canChange,
+      "REQUIRED INSIGHT\n" + requiredInsight,
+      "FORBIDDEN\n" + forbidden,
+      "REFERENCE EXAMPLES\n" + examples.map((e) => "- " + e).join("\n"),
+    ];
+    if (disclaimer) {
+      blocks.push(
+        "COMPLIANCE / DISCLAIMER\n" +
+          disclaimer +
+          " disclaimer required. This is a testimonial-style structure: write it as one person's " +
+          "first-person account, and the persona details it calls for (an age, a timeframe, a " +
+          "third-party line) are part of this structure — supply them. Never state a universal " +
+          "guarantee, and do NOT add the disclaimer text to the headline itself."
+      );
+    }
+
+    return {
+      id: s.id || uid("structure"),
+      n: s.n,
+      type: "headline",
+      structure,
+      mechanismName,
+      coreMechanism,
+      requiredInsight,
+      mustPreserve,
+      canChange,
+      forbidden,
+      examples,
+      disclaimer,
+      title: structure,
+      example: examples[0] || "",
+      content: blocks.join("\n\n"),
       seed: true,
     };
   }

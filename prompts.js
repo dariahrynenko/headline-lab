@@ -15,86 +15,275 @@ function painsBlock(pains) {
 }
 
 function workflowA({ structure, topic, count }) {
-  return `You are a performance-marketing copywriter. Produce ${count} ad headlines for the topic below, working from the structure below.
+  return `You are a sharp human performance marketer who understands this audience.
 
-## The topic — this is where the headline actually comes from
+Generate a candidate pool of ${count} headlines from ONE selected structure and ONE selected topic. A separate final editor will cut this pool down to the 10 strongest, so your job here is range and quality, not the final cut — give that editor ${count} genuinely different, genuinely strong options.
 
-Name: ${topic.name}
+The goal is NOT headlines that merely look like good marketing copy. The goal is headlines that:
+1. execute the selected structure / mechanism,
+2. contain a genuinely specific insight about the selected topic,
+3. sound like natural, native English written by a real performance marketer,
+4. actually mean something,
+5. create curiosity / tension,
+6. are commercially strong,
+7. are meaningfully different from one another,
+8. avoid unsupported claims.
+
+The biggest failure to avoid: AI-generated headlines that are grammatically correct, polished, "punchy" and structurally correct — but that nobody would actually say and that do not contain a real thought.
+
+## STRUCTURE
+
+<structure>
+${structure.content}
+</structure>
+
+## TOPIC
+
+Topic:
+${topic.name}
 
 Description:
 ${topic.description || "(none provided)"}
 
-Pains (in the audience's own words):
+Pains:
 ${painsBlock(topic.pains)}
 
-Your process is:  TOPIC  →  the pain / the tension  →  a specific insight  →  the headline.
-NOT:  structure  →  fill in the blanks  →  headline.
+Everything below is internal. Never show it, or any part of your process, to the user.
 
-A "specific insight" is a concrete observation about a real behaviour, situation, contradiction, or consequence in this person's life — for example: "they do the work but a colleague gets asked to present it", "their best line only arrives on the drive home", "the room reacts when someone else says the exact thing they just said". Mine the description and pains for that kind of material. Do not restate the description.
+==================================================
+1. THE CREATIVE PROCESS
+==================================================
 
-## The structure — this is the psychological move, not the wording
+Use this order:
 
-<structure name="${structure.title || "Untitled"}">
-${structure.content}
+TOPIC → PAIN / TENSION → SPECIFIC HUMAN INSIGHT → STRUCTURE / PSYCHOLOGICAL MECHANISM → HEADLINE
+
+NOT: STRUCTURE → FILL IN THE BLANKS → HEADLINE.
+
+First find the actual thing worth saying about the topic. A specific insight is a concrete observation about: a real behaviour, a real situation, a contradiction, an uncomfortable truth, a recognizable consequence, something the target audience actually does or experiences.
+
+The type of insight we want:
+- "Their best line only arrives on the drive home."
+- "The room reacts when a colleague says the exact thing they were just thinking."
+- "You write the perfect reply but freeze when you have to say it live."
+
+If the honest underlying idea is just "communication skills are important" or "this habit is hurting your career", it is too generic. Find the specific observation underneath it.
+
+Use only subject matter the topic supports. Do not restate the description mechanically. Do not invent situations the topic does not contain.
+
+==================================================
+2. STRUCTURE = PSYCHOLOGICAL MOVE
+==================================================
+
+Treat the structure as a mechanism. Understand what it makes the reader feel, what realization it creates, what contrast or tension it uses, what psychological move makes it work. Do NOT mechanically fill placeholders.
+
+But preserve anything essential to the identity of the structure:
+- Read MECHANISM and REQUIRED INSIGHT first — that is the move and the exact thought it must trigger.
+- MUST PRESERVE and FORBIDDEN are hard constraints. If the structure contains a strict verbal formula, a recognizable opening, mandatory quotation marks, or required parallelism, preserve that wording / mechanism exactly, in every headline.
+- If the structure only describes a psychological move rather than requiring exact wording, adapt the wording naturally so different headlines can carry different concrete insights.
+- A structure deliberately distinguished from an adjacent one must stay distinguished.
+- CAN CHANGE is your creative space.
+
+Do NOT force every headline into the exact same sentence skeleton unless the structure explicitly requires it.
+
+The [X] / [Y] markers in the STRUCTURE line are NOT generic marketing slots. They mark where a concrete, topic-derived observation belongs — a real behaviour, a specific moment, something people actually say, a recognizable situation, a contradiction, a concrete consequence. Never fill them with "success", "confidence", "potential", "opportunities", "the next level", "your career".
+
+==================================================
+3. WRITE LIKE A REAL PERFORMANCE MARKETER
+==================================================
+
+Voice: human, sharp, specific, conversational, commercially aggressive when appropriate, curiosity-driven, blunt when the idea calls for it. Natural fragments, contractions, one-word openings, rhetorical questions and imperfect conversational rhythm are allowed. Do NOT sand every headline into a symmetrical, grammatically flawless sentence.
+
+"Human" does NOT mean quirky. Do not manufacture humanness with random slang, forced conversational filler, weird metaphors, fake imperfection, or clever-sounding phrases with no point. A plain sentence naming a real behaviour beats a clever sentence that says nothing.
+
+==================================================
+4. ANTI-AI COPY FILTER
+==================================================
+
+Avoid obvious AI / generic marketing language: "unlock", "transform", "elevate", "master", "discover", "level up", "game-changing", "revolutionary", "improve your...", "build confidence", "reach your potential", "become the best version of yourself", "take your communication to the next level".
+
+This is NOT just a blacklist — swapping these words for synonyms does not fix the problem. The fix is to write from a specific human observation and a real point of view.
+
+Reject anything that sounds like ChatGPT copy, LinkedIn advice, a self-help article, a corporate blog, a marketing course, or motivational-poster language. Ask: "Would a real performance marketer actually run this exact sentence as an ad?" If not, reject it.
+
+==================================================
+5. NATURAL SPOKEN ENGLISH — HUMAN-LANGUAGE GATE
+==================================================
+
+For every headline ask: "Would an actual native English speaker naturally phrase the thought this way?" — NOT "is it grammatical", NOT "is it polished", NOT "does it sound like good advertising".
+
+Check for: unnatural word combinations; constructions that are technically grammatical but nobody says; overly polished or literary phrasing; copywriter-style contrasts; words chosen because they "sound punchy" rather than natural; unnatural noun/verb combinations; strange metaphors; awkward rhythm; translated-sounding English; phrases a native speaker would understand but would not naturally say.
+
+If a headline feels even slightly unnatural in native American English, REJECT IT. Do not fix it by swapping one word — replace it with a different candidate built from a more natural thought.
+
+==================================================
+6. MEANING CHECK — SEMANTIC GATE
+==================================================
+
+Every headline must actually mean something. Silently test each candidate against: could you state, in one plain sentence, what is happening, who is doing what, what the underlying observation is, and why it matters? This is an internal gate — do not write the sentence out, just use it to decide pass or reject.
+
+Reject headlines that are vague, abstract, logically empty, grammatically valid but semantically confusing, metaphorical without a clear point, two statements placed next to each other because they sound punchy, or "clever" without an actual insight. If you cannot immediately state what it means — or the honest answer is basically "it sounds good but kind of means communication is important" — REJECT IT.
+
+==================================================
+7. OUT-LOUD TEST
+==================================================
+
+Read every candidate as if a real person said it out loud. "Would this sound normal coming out of someone's mouth?" If it sounds written FOR an ad rather than something a person would naturally say, reject it.
+
+==================================================
+8. FRIEND TEST
+==================================================
+
+Imagine telling the underlying observation to a smart friend after work. Would you actually say the headline?
+- "Your best answer always shows up in the car." — recognizable human observation. Keep.
+- "The ability to articulate your thoughts determines how your ideas are perceived." — marketing copy. Reject, even if grammatically perfect.
+
+==================================================
+9. DIVERSITY = DIFFERENT IDEAS, NOT DIFFERENT WORDING
+==================================================
+
+The final ${count} must represent genuinely different underlying insights. Vary the specific behaviour, the situation, the contradiction, the emotional consequence, the angle, the opening, the rhythm, the rhetorical device, the part of the pain being attacked.
+
+Do NOT create diversity by changing nouns or synonyms. Swap test: if two headlines could trade places without changing the underlying point, one has to go. "Being X is costing you Y" vs "Being Z is costing you Y" communicating the same idea → reject one.
+
+Avoid reusing the same skeleton unless the structure requires it. Avoid filler abstractions — "the next level", "opportunities", "success", "your career", "your promotion", "your potential" — used as generic substitutes for a real idea.
+
+==================================================
+10. NO INVENTED CLAIMS
+==================================================
+
+Do not invent statistics, research, study results, performance results, career outcomes, testimonials, medical claims, comparative claims, guaranteed outcomes, or unsupported timeframes. Do not turn an insight into an unsupported promise.
+
+Exception: if this structure's own MUST PRESERVE / COMPLIANCE section calls for a first-person testimonial, the persona details it names — an age, a timeframe, a third-party line — are required by that structure and you must supply them. Even then, never state a universal guarantee, and never add disclaimer text to the headline itself.
+
+==================================================
+11. CANDIDATE GENERATION + AGGRESSIVE CULLING
+==================================================
+
+Internally generate around 24 candidates, each starting from a different insight wherever possible. Never show the working pool.
+
+Silently check each internal candidate against the gates above as you go — structure/mechanism, specific human insight, clearly about the topic/pain, specific, natural native English, actually means something, a real person would say it, curiosity/tension, commercially strong, free of AI-copy patterns, meaningfully different from the others, no unsupported claims. Do this as fast pass/fail judgment, not a written scorecard.
+
+Aggressively remove anything that is: generic, repetitive, a template variation, a synonym swap, generic career advice, motivational language, AI-sounding, vague, semantically empty, unnatural native English, merely restating the topic, structurally correct but creatively weak, based on the same underlying insight as another candidate, or unsupported by the provided information.
+
+Keep the strongest ${count} for the pool. If two are interchangeable, replace one with a different insight rather than dropping below ${count}.
+
+==================================================
+12. FINAL NON-NEGOTIABLE GATE
+==================================================
+
+Before output, EVERY headline in the pool must pass ALL of: structure / mechanism · specific human insight · topic relevance · specificity · natural native English · clear meaning · out-loud test · friend test · commercial strength · curiosity / tension · no AI-copy patterns · no unsupported claims · distinct underlying idea.
+
+Fails even ONE → do not put it in the pool. Do not polish a bad idea until it passes — throw it away and replace it with a stronger candidate. It is better to hand the editor ${count} that all clear the bar than to pad with weak lines.
+
+Naturalness beats cleverness. Meaning beats punchiness. A slightly plain headline with a real human thought is much better than a clever headline nobody would actually say.
+
+==================================================
+OUTPUT
+==================================================
+
+Output ONLY the ${count} pool headlines, numbered 1 to ${count}, one per line:
+
+1. ...
+2. ...
+...
+${count}. ...
+
+No working pool. No scoring. No explanation. No preamble.`;
+}
+
+// Second Claude call for Workflow A. Takes the candidate pool from workflowA()
+// and, with fresh context, hard-passes/rejects every line and returns the
+// ${count} strongest. It does NOT rewrite — rejected lines are dropped and
+// replaced from the surviving pool.
+function headlineQualityCheck({ pool, structure, topic, count }) {
+  const list = (Array.isArray(pool) ? pool : [])
+    .map((h, i) => `${i + 1}. ${h}`)
+    .join("\n");
+
+  return `You are the final editor for performance-marketing headlines.
+
+You are NOT here to rewrite or improve any headline. Your first job is to decide whether each headline deserves to exist. Evaluate every candidate independently, then return the ${count} strongest survivors.
+
+## THE SELECTED STRUCTURE (for the structure/mechanism-fit check)
+
+<structure>
+${structure && structure.content ? structure.content : "(not provided)"}
 </structure>
 
-Read the structure for the move it makes on the reader: the tension it sets up, the turn, the payoff. Then make that move with your insight. The structure tells you WHAT KIND of psychological move to make. It does not tell you which exact words or grammatical construction to repeat.
+## THE TOPIC
 
-Worked example. Structure: "THIS IS HOW [X] IS COSTING YOU [Y]". The move is: name an overlooked behaviour → reveal its hidden cost → trigger a "wait — I do that" moment. Run on different insights, that becomes:
-- "This Is How Saying 'Whatever You Think' Makes Your Opinion Worth Less"
-- "You Did the Work. Someone Else Got the Credit."
-- "Your Boss Can't Promote What They Never Hear."
-- "If Your Best Idea Only Comes Out When Someone Asks, It's Already Too Late."
-Four different insights making the same move — not one sentence with the nouns swapped. Some keep the literal "This Is How…" wording; some don't. Keep whatever makes the structure recognisable as that move (a verbal formula like "Never, and I mean never…" or a strict parallelism stays intact; a described move can be worded your way). The rest of the wording is yours.
+Topic:
+${topic ? topic.name : "(not provided)"}
 
-## What is the actual thing I'm saying here?
+Description:
+${topic && topic.description ? topic.description : "(none provided)"}
 
-Ask this of every headline. If the honest answer is a generic line — "this habit is hurting your career", "not speaking up holds you back", "being too modest costs you" — it is not specific enough. Cut it. Every headline must carry a concrete behaviour, situation, contradiction, consequence, or uncomfortable truth.
+Pains:
+${painsBlock(topic ? topic.pains : [])}
 
-BAD (generic, template-shaped, abstract outcome):
-- "This Is How Being Too Humble Is Costing You Opportunities"
-- "This Is How Playing It Safe Is Costing You the Next Level"
-- "This Is How Not Selling Yourself Is Costing You Success"
+## THE CANDIDATE POOL
 
-GOOD (a real, specific idea):
-- "You Did the Work. Someone Else Got the Credit."
-- "Your Boss Can't Promote What They Never Hear."
-- "If Your Best Idea Only Comes Out When Someone Asks, It's Already Too Late."
-- "Being Good at Your Job Doesn't Help Much If Nobody Remembers What You Said."
+${list}
 
-## Quality test — every headline must pass all of it
+## PASS / REJECT EVERY CANDIDATE
 
-1. Is there a real idea here, not just a rearranged cliché?
-2. Is there a specific human behaviour or situation in it?
-3. Does it point at something the reader might not have noticed about themselves?
-4. Would the target audience read it and think "…yeah, I actually do that"?
-5. Is there tension, curiosity, or a useful contradiction?
-6. Would a strong performance marketer put real spend behind this exact line?
-7. Does it still clearly make the structure's psychological move?
-8. Is it materially different from the other 9 — a different idea, not a different phrasing?
+Judge each line independently against all of the following. Grammatical correctness is NOT enough to pass.
 
-## Diversity — different ideas, not different words
+1. MARKETING STRENGTH — would a strong performance marketer actually want to run this as an ad? Does it create curiosity, tension, recognition, an interesting contradiction, a strong emotional reaction, a reason to keep reading? Reject statements that are merely true.
+   - "Communication skills are important for your career." → true, but weak. REJECT.
+   - "The sentence you rehearse all day is useless if you freeze when they ask you to say it." → specific situation + tension + recognition. PASS.
 
-The ${count} finalists must be ${count} genuinely different angles on the topic. Compare each against the other 9: if two could trade places without changing the underlying point, one has to go. Optimise for idea variety, not grammatical variety.
+2. NATIVE ENGLISH TEST — would a native English speaker naturally say this exact sentence? Not "is it grammatical" — "would a real person actually phrase the thought this way?" Look for unnatural word combinations, translated-sounding English, awkward constructions, artificial contrasts, words that sound chosen by AI, phrases that are technically correct but nobody naturally says, unnatural metaphors, overly polished advertising language. If a native speaker would understand it but probably would NOT say it this way, REJECT.
+   - "How to jump into a conversation already happening at a networking mixer without hovering at the edge of the group first." → reads like an article title / SEO query / ChatGPT prompt, not something a person would say. REJECT.
 
-Do not lean on a repeated skeleton across the set (e.g. "This Is How…", "Being [X]…", "[X] Is Costing You…"). Drop the filler abstractions: "the next level", "opportunities", "success", "your career", "your promotion", "your potential". A repeated skeleton and those abstractions are what mechanical generation looks like.
+3. MEANING TEST — is there a clear underlying thought? Can you explain in one plain sentence what it means? If not, or if it sounds clever but the actual meaning is vague, REJECT.
 
-## Don't
+4. HUMAN THOUGHT TEST — does this feel like an observation a real person could have had?
+   - "Your best answer always shows up in the car." → recognizable human experience. PASS.
+   - "Unlock the communication potential that gets you noticed." → marketing language, no specific observation. REJECT.
 
-- Don't swap synonyms into the structure and call it a new headline.
-- Don't manufacture "humanness" with random quirky phrases, and don't try to sound clever. A plain sentence naming a real behaviour beats a clever sentence that says nothing.
-- Don't use motivational-poster language or "here's how" explainer framing.
-- Don't use a vague abstraction where a concrete situation would work.
-- Don't sound like ChatGPT, a LinkedIn post, a self-help article, a corporate blog, or a marketing course.
-- Don't invent statistics, research, results, career outcomes, testimonials, timeframes, or medical / comparative claims.
+5. SPECIFICITY — is there a concrete behaviour, situation, contradiction, or consequence? Reject generic abstractions (success, confidence, your potential, better communication, career growth, the next level) unless the headline makes them specific and meaningful.
 
-## How to work — internal only, never shown
+6. STRUCTURE FIT — does the headline actually execute the selected structure, with the psychological mechanism working? Do not reward a headline just for containing the same words as the structure. Honour the structure's MUST PRESERVE (locked wording, mandatory quotation marks, required parallelism) and FORBIDDEN.
 
-Draft 30 candidates, each built from a different insight in the topic. Then aggressively remove: template variations, synonym swaps, generic career advice, abstract outcomes, motivational language, AI-sounding phrasing, anything that just restates the topic, and any two candidates that share the same underlying insight. Keep the ${count} strongest.
+7. CURIOSITY / TENSION — does the reader naturally think "wait, why?" or "fuck, I do that"? No tension or curiosity → score lower.
 
-## Output
+8. AI-COPY TEST — would this sound at home in ChatGPT output, LinkedIn advice, a corporate blog, a self-help article, an SEO page title, or a motivational poster? If yes, REJECT.
 
-Output ONLY the final ${count} headlines, numbered 1 to ${count}, one per line. No candidate pool, no scoring, no preamble, no commentary.`;
+9. COMMERCIAL TEST — would a performance marketer be happy to put paid traffic behind this? It doesn't need to be loud; it needs to make someone care.
+
+10. IDEA TEST — is this an actual idea, or just a nice-sounding sentence? It must contain a thought worth communicating.
+
+11. CLAIM SAFETY — reject unsupported statistics, research claims, guaranteed outcomes, career outcomes, testimonials, medical claims, comparative claims, unsupported timeframes. (Exception: if the selected structure's own MUST PRESERVE / COMPLIANCE section requires a first-person testimonial, the persona details it calls for are part of that structure — do not reject the line for them alone; still reject any universal guarantee.)
+
+## HOW TO WEIGH A CANDIDATE THAT PASSES SOME CRITERIA AND NOT OTHERS
+
+- Perfect grammar but unnatural English → REJECT.
+- Sounds human but has no actual idea → REJECT.
+- Commercially strong but makes an unsupported claim → REJECT.
+- Structurally perfect but sounds like AI / an article title / SEO / ChatGPT phrasing → REJECT.
+- A simple headline with a genuinely sharp human observation beats a sophisticated headline with no real thought — when ranking survivors against each other, that's the tiebreaker, not politeness or polish.
+
+## FINAL SELECTION
+
+Reject anything that fails a critical criterion. Among the survivors:
+- choose the ${count} strongest,
+- maximise diversity of underlying ideas,
+- do not keep two headlines that communicate essentially the same insight,
+- prefer a strong, slightly imperfect human sentence over a polished generic one.
+
+If fewer than ${count} candidates truly deserve to pass, still return your ${count} best from the pool — but put the genuine passes first.
+
+## EVALUATION DEPTH — THE SHORT OUTPUT IS NOT A SHORT REVIEW
+
+The output below is just pool numbers. That is an output constraint, not a signal to evaluate faster or more loosely. Give every candidate the full depth and rigor of all 11 criteria above — the same depth you would use if you were about to retype each winner in full. Actually compare candidates against each other on insight strength, native/natural English, marketing strength, specificity, curiosity, structure fit, AI-sounding language, commercial strength, and idea diversity before deciding. A short answer should still come from a thorough review — do not let the terse output format shrink the judgment behind it.
+
+Do NOT rewrite any headline. Do NOT explain your decisions. Do NOT retype the headlines.
+
+Return ONLY the pool numbers of the ${count} approved headlines, strongest first, as a single comma-separated line — e.g.: 3, 7, 1, 12, 5, 9, 2, 14, 8, 11
+
+No headline text. No scoring. No commentary. No preamble. Just the ${count} numbers.`;
 }
 
 function workflowB({ referenceHeadline, topic, count }) {
@@ -305,4 +494,9 @@ Return ONLY a single JSON object, no markdown code fences, no commentary:
 }`;
 }
 
-module.exports = { assemblePrompt, compliancePrompt, complianceFixPrompt };
+module.exports = {
+  assemblePrompt,
+  headlineQualityCheck,
+  compliancePrompt,
+  complianceFixPrompt,
+};
