@@ -15,39 +15,86 @@ function painsBlock(pains) {
 }
 
 function workflowA({ structure, topic, count }) {
-  return `You are a senior marketing copywriter generating a batch of headline options.
+  return `You are a performance-marketing copywriter. Produce ${count} ad headlines for the topic below, working from the structure below.
 
-Write ${count} marketing headlines for one topic. Every headline must be built on the structure below. The structure is the structural and rhetorical framework the headline follows — not loose inspiration. The topic supplies the subject matter. The pains supply the audience's problems and the tension to press on.
-
-## Structure to follow
-
-<structure name="${structure.title || "Untitled"}">
-${structure.content}
-</structure>
-
-## Topic
+## The topic — this is where the headline actually comes from
 
 Name: ${topic.name}
 
 Description:
 ${topic.description || "(none provided)"}
 
-Pains (the audience's problems, in their own words):
+Pains (in the audience's own words):
 ${painsBlock(topic.pains)}
 
-## What to produce
+Your process is:  TOPIC  →  the pain / the tension  →  a specific insight  →  the headline.
+NOT:  structure  →  fill in the blanks  →  headline.
 
-- Exactly ${count} distinct headlines. Each one clearly follows the structure above.
-- Strong hooks. Specific, concrete language — no vague filler.
-- Real emotional tension, drawn from the pains.
-- Natural human phrasing. Not stiff, not "marketer voice".
-- Vary the phrasing, rhythm, and sentence shape across the set. No two headlines should feel interchangeable.
-- Every headline is about this topic and speaks to these pains.
-- Do NOT invent statistics, numbers, customer counts, timeframes, results, testimonials, or proof of any kind.
+A "specific insight" is a concrete observation about a real behaviour, situation, contradiction, or consequence in this person's life — for example: "they do the work but a colleague gets asked to present it", "their best line only arrives on the drive home", "the room reacts when someone else says the exact thing they just said". Mine the description and pains for that kind of material. Do not restate the description.
+
+## The structure — this is the psychological move, not the wording
+
+<structure name="${structure.title || "Untitled"}">
+${structure.content}
+</structure>
+
+Read the structure for the move it makes on the reader: the tension it sets up, the turn, the payoff. Then make that move with your insight. The structure tells you WHAT KIND of psychological move to make. It does not tell you which exact words or grammatical construction to repeat.
+
+Worked example. Structure: "THIS IS HOW [X] IS COSTING YOU [Y]". The move is: name an overlooked behaviour → reveal its hidden cost → trigger a "wait — I do that" moment. Run on different insights, that becomes:
+- "This Is How Saying 'Whatever You Think' Makes Your Opinion Worth Less"
+- "You Did the Work. Someone Else Got the Credit."
+- "Your Boss Can't Promote What They Never Hear."
+- "If Your Best Idea Only Comes Out When Someone Asks, It's Already Too Late."
+Four different insights making the same move — not one sentence with the nouns swapped. Some keep the literal "This Is How…" wording; some don't. Keep whatever makes the structure recognisable as that move (a verbal formula like "Never, and I mean never…" or a strict parallelism stays intact; a described move can be worded your way). The rest of the wording is yours.
+
+## What is the actual thing I'm saying here?
+
+Ask this of every headline. If the honest answer is a generic line — "this habit is hurting your career", "not speaking up holds you back", "being too modest costs you" — it is not specific enough. Cut it. Every headline must carry a concrete behaviour, situation, contradiction, consequence, or uncomfortable truth.
+
+BAD (generic, template-shaped, abstract outcome):
+- "This Is How Being Too Humble Is Costing You Opportunities"
+- "This Is How Playing It Safe Is Costing You the Next Level"
+- "This Is How Not Selling Yourself Is Costing You Success"
+
+GOOD (a real, specific idea):
+- "You Did the Work. Someone Else Got the Credit."
+- "Your Boss Can't Promote What They Never Hear."
+- "If Your Best Idea Only Comes Out When Someone Asks, It's Already Too Late."
+- "Being Good at Your Job Doesn't Help Much If Nobody Remembers What You Said."
+
+## Quality test — every headline must pass all of it
+
+1. Is there a real idea here, not just a rearranged cliché?
+2. Is there a specific human behaviour or situation in it?
+3. Does it point at something the reader might not have noticed about themselves?
+4. Would the target audience read it and think "…yeah, I actually do that"?
+5. Is there tension, curiosity, or a useful contradiction?
+6. Would a strong performance marketer put real spend behind this exact line?
+7. Does it still clearly make the structure's psychological move?
+8. Is it materially different from the other 9 — a different idea, not a different phrasing?
+
+## Diversity — different ideas, not different words
+
+The ${count} finalists must be ${count} genuinely different angles on the topic. Compare each against the other 9: if two could trade places without changing the underlying point, one has to go. Optimise for idea variety, not grammatical variety.
+
+Do not lean on a repeated skeleton across the set (e.g. "This Is How…", "Being [X]…", "[X] Is Costing You…"). Drop the filler abstractions: "the next level", "opportunities", "success", "your career", "your promotion", "your potential". A repeated skeleton and those abstractions are what mechanical generation looks like.
+
+## Don't
+
+- Don't swap synonyms into the structure and call it a new headline.
+- Don't manufacture "humanness" with random quirky phrases, and don't try to sound clever. A plain sentence naming a real behaviour beats a clever sentence that says nothing.
+- Don't use motivational-poster language or "here's how" explainer framing.
+- Don't use a vague abstraction where a concrete situation would work.
+- Don't sound like ChatGPT, a LinkedIn post, a self-help article, a corporate blog, or a marketing course.
+- Don't invent statistics, research, results, career outcomes, testimonials, timeframes, or medical / comparative claims.
+
+## How to work — internal only, never shown
+
+Draft 30 candidates, each built from a different insight in the topic. Then aggressively remove: template variations, synonym swaps, generic career advice, abstract outcomes, motivational language, AI-sounding phrasing, anything that just restates the topic, and any two candidates that share the same underlying insight. Keep the ${count} strongest.
 
 ## Output
 
-Output only the ${count} headlines, numbered 1 to ${count}, one per line. Nothing else — no introduction, no closing line, no notes, no commentary, no description of the structure.`;
+Output ONLY the final ${count} headlines, numbered 1 to ${count}, one per line. No candidate pool, no scoring, no preamble, no commentary.`;
 }
 
 function workflowB({ referenceHeadline, topic, count }) {

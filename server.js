@@ -49,7 +49,8 @@ const ROOT = __dirname;
 
 const MODEL = "claude-sonnet-5"; // verified against platform.claude.com/docs (Models overview)
 const ANTHROPIC_VERSION = "2023-06-01";
-const MAX_TOKENS = 4000; // headlines
+const MAX_TOKENS = 4000; // workflow B (reference-headline adaptation)
+const HEADLINE_MAX_TOKENS = 8000; // workflow A: room for the internal 30-candidate pass
 const SCENE_MAX_TOKENS = 8000; // one full dialogue scene
 const COMPLIANCE_MAX_TOKENS = 6000; // structured risk assessment / rewrite
 const HEADLINE_COUNT = 10;
@@ -218,10 +219,12 @@ async function handleGenerate(req, res) {
     count: HEADLINE_COUNT,
   });
 
-  const result = await claudeComplete(apiKey, {
-    maxTokens: isScene ? SCENE_MAX_TOKENS : MAX_TOKENS,
-    prompt,
-  });
+  const maxTokens = isScene
+    ? SCENE_MAX_TOKENS
+    : workflow === "A"
+    ? HEADLINE_MAX_TOKENS
+    : MAX_TOKENS;
+  const result = await claudeComplete(apiKey, { maxTokens, prompt });
   if (!result.ok) return sendJson(res, result.status, { error: result.error });
 
   const text = result.text;
