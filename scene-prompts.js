@@ -322,10 +322,14 @@ function scenarioDesignPrompt({ inputs = {}, mode = "full", prevSpec = null, avo
     ingredientLine("Creative direction", i.creativeDirection),
   ].join("\n");
 
-  const scenarioBlock =
-    i.scenarioMode === "manual" && i.scenario && i.scenario.trim()
-      ? `The user has written the scenario. Build from THIS situation — do not replace it, deepen it:\n"${i.scenario.trim()}"`
-      : "The user has NOT written a scenario. Design one. It must describe WHAT IS HAPPENING (a concrete situation), not what the dialogue should be.";
+  const givenSituation =
+    (i.scenarioMode === "given" || i.scenarioMode === "manual") && i.scenario && i.scenario.trim()
+      ? i.scenario.trim()
+      : "";
+  const scenarioBlock = givenSituation
+    ? `The user chose this common, real-life situation. Build the scene INSIDE exactly this — do not replace it, do not escalate it into something extraordinary. Find the communication problem inside the ordinary version of it:
+"${givenSituation}"`
+    : "The user did not name a situation. Design one — but it must be a common, recognizable situation that could realistically happen tomorrow, described as WHAT IS HAPPENING (a concrete moment), not what the dialogue should be. Do not invent an unusual or cinematic setup.";
 
   let modeBlock = "";
   if (mode === "regen-scenario" && prevSpec) {
@@ -365,6 +369,14 @@ ${ingredients}
 ${scenarioBlock}
 
 Treat each selected ingredient as a creative constraint you must honour and interpret — never a slot to fill at a fixed point. "Third-party overhear" does not mean an overheard line dropped at a scripted beat; it means design the most natural version of that turn for THESE characters, THIS place, THIS conflict. "Over-explanation spiral" is a direction for how the tension rises, not a mandatory sequence of lines. Where an ingredient says "(you choose)", pick a concrete value that coheres with everything else.
+
+## GROUNDING — THIS IS NOT A MOVIE
+
+Familiar situation first. Creative interpretation second. The situation must be something that could realistically happen tomorrow — not something invented to make the ad interesting.
+
+Do NOT invent extraordinary circumstances for drama. No mysterious strangers, bizarre coincidences, emergencies, shocking revelations, unrealistic confrontations, movie-like twists, implausibly perfect setups, or characters behaving unnaturally just to manufacture a product moment. If the user picked "airport gate", it stays an ordinary airport gate — never an airport emergency.
+
+The drama comes ONLY from the communication problem. Prefer: an awkward introduction; a conversation that quietly dies; someone answering in one word; someone talking too much; someone who doesn't know what to say next; a repeated interaction; a status difference; professional pressure; attraction; embarrassment; a missed opportunity; someone trying too hard; someone being polite but clearly wanting to leave; ordinary social friction. The people behave like real people in a normal moment — the interaction is what's sharp, not the circumstances.
 
 ${modeBlock}
 
@@ -487,6 +499,9 @@ ${task}${avoidBlock}
 - The product mention isn't earned — you cannot answer "why would THIS person say THIS to THIS person right now?" from the scene itself.
 - The product lands the instant the diagnosis ends, or a character says "you should try..." / "I recommend...", or switches into coach / advertiser voice, or lists features.
 - The placement is a quiet-discovery / silent type but a character still names the product out loud.
+- The situation is extraordinary, cinematic, or invented for drama rather than something that could plainly happen tomorrow (an emergency, a bizarre coincidence, a shocking reveal, a mysterious stranger, a movie-like twist).
+- The drama comes from an unusual plot rather than from the communication problem.
+- The user named a situation and the scene has drifted out of it or blown it up into something bigger.
 - It feels like an ad disguised as dialogue.
 - The second character exists only to teach the first.
 - The product is mentioned before the problem is established.

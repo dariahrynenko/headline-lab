@@ -631,37 +631,181 @@
 
   /* ---------------- Scene Generator ---------------- */
 
+  // A large curated library of common, recognizable real-life situations. The
+  // user casts a believable moment — the model finds the communication problem
+  // inside the ordinary version of it, it does not invent a movie.
+  const SG_SCENARIOS = {
+    "WORK / OFFICE": [
+      "Making small talk before a meeting starts",
+      "Waiting for a meeting to start, seated next to a senior coworker",
+      "Standing at the office coffee machine when a VP walks in",
+      "In the office kitchen while a colleague makes coffee",
+      "Passing a senior executive in the hallway",
+      "Sharing an elevator with two coworkers",
+      "Grabbing lunch with a coworker you don't know well",
+      "First day at a new job, being walked around to meet the team",
+      "A one-on-one with your manager",
+      "Cornered by your manager for a 'quick update'",
+      "In a performance review",
+      "Asking your manager for a raise",
+      "Introducing yourself at a work networking event",
+      "Trying to work the room at an industry conference",
+      "After-work drinks with the team",
+      "A team happy hour where you know almost no one",
+      "Sitting next to someone before an all-hands",
+      "Meeting someone from another department for the first time",
+      "Giving a short update to leadership",
+      "Being introduced to a client",
+      "Standing near the CEO at a company event",
+      "Catching a senior colleague in the parking garage",
+      "Small talk with the person at the next desk",
+      "Waiting by the printer with a coworker",
+    ],
+    "SOCIAL": [
+      "At a house party where you only know the host",
+      "At a dinner party, seated next to a stranger",
+      "At a friend's birthday, surrounded by their friends",
+      "At a wedding reception, seated with people you've never met",
+      "Standing at the bar waiting for a drink",
+      "Waiting in line at a coffee shop",
+      "Seated next to a stranger at a restaurant",
+      "Being introduced to a friend's friend",
+      "A mutual friend introduces you to someone",
+      "Trying to join a group that's already mid-conversation",
+      "Running into an acquaintance you half-remember",
+      "Chatting with a neighbor you rarely see",
+      "At a rooftop party, drink in hand",
+      "On the sidelines of a kid's birthday party",
+      "At a book club with people you've just met",
+      "At a housewarming, waiting for someone you know to arrive",
+      "Small talk with a friend's partner",
+      "At a barbecue, meeting the other guests",
+      "Stuck talking to one person for too long at a party",
+    ],
+    "TRAVEL": [
+      "Sitting next to a stranger at the airport gate",
+      "Next to someone on a plane",
+      "In the hotel lobby at check-in",
+      "Sharing a hotel elevator with another guest",
+      "At the hotel bar after a conference",
+      "Waiting out a delayed flight",
+      "In the back of a rideshare",
+      "In a taxi with a talkative driver",
+      "On a train, seated across from a stranger",
+      "Standing on the train platform",
+      "At the conference hotel breakfast",
+      "In the airport lounge",
+      "Waiting at baggage claim",
+      "Sharing a shuttle to the airport",
+    ],
+    "DATING / ROMANTIC": [
+      "A first date at a bar",
+      "Waiting at the bar before your date arrives",
+      "Sitting across from someone on a first date",
+      "Meeting someone through a friend at a party",
+      "Meeting a dating-app match for the first time",
+      "Walking someone to their car after a date",
+      "Talking to someone you're attracted to at a party",
+      "Introduced to someone single at a wedding",
+      "Making conversation with a date who keeps giving short answers",
+      "The post-date debrief with a friend",
+    ],
+    "EVERYDAY": [
+      "On the treadmill next to a regular you see every morning",
+      "At the gym reception desk",
+      "Sharing the elevator in your apartment building",
+      "Passing a neighbor in the apartment hallway",
+      "In the grocery store checkout line",
+      "At the dog park while the dogs play",
+      "In a waiting room",
+      "In the barber's chair",
+      "At the hair salon",
+      "At the nail salon",
+      "In the doctor's waiting room",
+      "In your building's lobby, waiting for the elevator",
+      "Ordering at the counter of a busy coffee shop",
+      "Browsing next to someone in a bookstore",
+      "At the pharmacy counter",
+      "Waiting for a table at a restaurant",
+    ],
+    "FAMILY / PERSONAL": [
+      "At family dinner",
+      "Talking to a sibling in the kitchen",
+      "Visiting your parents for the weekend",
+      "One-on-one with a parent",
+      "At a friend's house, meeting their family",
+      "Chatting with a neighbor over the fence",
+      "School pickup, small talk with another parent",
+      "At a relative's birthday gathering",
+      "Catching up with a cousin you rarely see",
+      "Helping a parent with something and trying to talk at the same time",
+    ],
+  };
+
   const SG_SETTINGS = [
-    "Office kitchen", "Elevator", "Networking event", "Bar", "Coffee shop", "Airport gate",
-    "Wedding reception", "Gym floor", "Supermarket checkout", "Hotel lobby", "Restaurant",
-    "Street", "Conference floor", "Interview waiting room", "Back of an Uber",
-    "Open-plan office", "Company all-hands", "Dog park", "Parking garage", "Rooftop party",
+    "Office kitchen / break room", "Coffee machine", "Meeting room before others arrive",
+    "Office hallway", "Open-plan office", "Company all-hands", "Elevator with coworkers",
+    "Parking garage", "Conference floor", "Interview waiting room", "Networking event",
+    "After-work bar", "Restaurant", "Restaurant bar", "Coffee shop", "Cafe counter queue",
+    "Hotel lobby", "Hotel bar", "Hotel elevator", "Airport gate", "Airport lounge",
+    "Airplane cabin", "Back of a rideshare", "Taxi", "Train car", "Train platform",
+    "House party kitchen", "Dinner table", "Backyard barbecue", "Rooftop party",
+    "Wedding reception", "Kid's birthday party", "Gym floor", "Gym reception",
+    "Apartment building elevator", "Apartment hallway", "Building lobby", "Dog park",
+    "Supermarket checkout", "Pharmacy counter", "Doctor's waiting room", "Barber shop",
+    "Hair salon", "Nail salon", "Bookstore", "School gate", "Parents' kitchen",
   ];
   const SG_ROLES = [
-    "Coworker", "Manager", "VP", "CEO", "Recruiter", "Interviewer", "Stranger",
-    "Old friend", "Partner / spouse", "Client", "Service worker", "Networking contact",
-    "Junior teammate", "Board member", "Founder",
+    "Coworker", "Coworker from another team", "Senior colleague", "Junior teammate",
+    "Team lead", "Manager", "Direct report", "Skip-level manager", "Department head",
+    "VP", "CEO", "Founder", "Board member", "New hire", "Contractor",
+    "Recruiter", "Interviewer", "Job candidate", "Client", "Vendor", "Customer",
+    "Service worker", "Barista", "Bartender", "Hairdresser", "Personal trainer",
+    "Networking contact", "Old friend", "Friend of a friend", "Acquaintance",
+    "Neighbor", "Date", "Someone you're attracted to", "Partner / spouse",
+    "Parent", "Adult child", "Sibling", "Cousin", "Fellow parent", "Seatmate",
+    "Person ahead of you in line", "Stranger",
   ];
   const SG_DYNAMICS = [
-    "stranger → stranger", "peer → peer", "junior → senior", "senior → junior",
-    "employee → manager", "candidate → recruiter", "colleague → colleague",
-    "friend → friend", "client → professional", "professional → client",
+    "junior employee → senior employee", "senior → junior", "coworker ↔ coworker",
+    "manager → direct report", "direct report → manager", "founder → employee",
+    "employee → founder", "you → someone more senior", "candidate → interviewer",
+    "customer → service worker", "service worker → customer", "client → professional",
+    "professional → client", "friend → friend's friend", "neighbor ↔ neighbor",
+    "adult child → parent", "sibling ↔ sibling", "stranger ↔ stranger",
+    "passenger ↔ passenger", "guest ↔ guest at an event",
+    "you → someone you're attracted to",
   ];
   const SG_TURNS = [
-    "Physical rejection", "Third-party overhears", "Third-party comments privately",
-    "Someone walks away", "Someone else gets the credit", "Mirror moment",
-    "Unexpected recognition", "Failed second attempt",
-    "Person realizes they keep repeating the same behavior", "Silent humiliation",
-    "Unexpected confession", "The other person calls it out flatly",
+    "The conversation just dies", "The other person checks their phone",
+    "They give a one-word answer and you keep going", "Someone walks away",
+    "They get pulled away by someone else", "You run out of things to say",
+    "A short, honest answer lands after too many words",
+    "Someone finishes your sentence for you", "Someone else gets the credit",
+    "A third party overhears", "A third party comments quietly afterward",
+    "You realize afterward what you should have said",
+    "A quiet, unspoken brush-off", "The other person gives you a way out and you take it",
+    "They remember you did this last time", "You catch your own reflection",
+    "You realize you keep repeating the same lines", "Failed second attempt",
+    "An unexpected, ordinary bit of honesty",
   ];
   const SG_ESCALATIONS = [
-    "Generic → invasive", "Polite → desperate", "Autopilot question loop",
-    "Over-explanation spiral", "Good intention → increasingly awkward execution",
-    "Repeated failed attempts",
+    "The conversation slowly dies", "Polite → quietly desperate",
+    "One-word answers, and you keep pushing", "Talking too much, filling every silence",
+    "Over-explaining, one qualifier at a time", "Autopilot question loop",
+    "Asking questions nobody wants to answer", "Circling back to the same topic",
+    "Trying too hard to be interesting", "Answering a question that wasn't the point",
+    "Rehearsing your next line instead of listening",
+    "The other person is politely checking out", "Repeated failed attempts",
+    "Good intention → increasingly awkward execution",
   ];
   const SG_PLACEMENTS = [
-    "Direct peer recommendation", "Third-party recommendation", "Personal confession",
-    "Silent download moment", "Named as the fix for the specific problem",
+    "Personal confession (they had the same problem)",
+    "Third-party recommendation (someone who overheard)",
+    "Proof through behaviour (they show the better line, then say why they can)",
+    "Named as the fix for the exact thing that just happened",
+    "Quiet discovery (person searches for it alone, nobody sells anything)",
+    "Shown, not spoken (a training app already open on someone's phone)",
   ];
   const SG_LENGTHS = ["30 sec", "45 sec", "60 sec", "90 sec"];
 
@@ -672,8 +816,9 @@
       characterA: "RANDOM",
       characterB: "RANDOM",
       socialDynamic: "RANDOM",
-      scenario: "",
-      scenarioMode: "ai", // "ai" | "manual"
+      scenarioMode: "pick", // "pick" (from library) | "manual" (write it) | "ai" (let generator decide)
+      scenarioPick: "RANDOM", // selected library situation
+      scenario: "", // free-text situation
       dramaticTurn: "RANDOM",
       escalationPattern: "RANDOM",
       productPlacement: "RANDOM",
@@ -690,6 +835,24 @@
     return `<div class="select-wrap"><select id="${id}">${opts}<option value="RANDOM" ${
       isRandom ? "selected" : ""
     }>${esc(randomLabel || "Random / AI decides")}</option></select></div>`;
+  }
+
+  function sgGroupedSelect(id, groups, selected) {
+    const isRandom = !selected || selected === "RANDOM";
+    const body = Object.keys(groups)
+      .map(
+        (g) =>
+          `<optgroup label="${esc(g)}">${groups[g]
+            .map(
+              (v) =>
+                `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`
+            )
+            .join("")}</optgroup>`
+      )
+      .join("");
+    return `<div class="select-wrap"><select id="${id}"><option value="RANDOM" ${
+      isRandom ? "selected" : ""
+    }>Let the generator pick a common situation</option>${body}</select></div>`;
   }
 
   function sgTopicSelect(selected) {
@@ -713,7 +876,7 @@
     view.innerHTML = `
       <header class="page-hero">
         <h1>Scene Generator</h1>
-        <p class="page-sub">Pick the creative ingredients. The model designs a believable situation from them, then writes the scene. Nothing here uses the 28 headline structures.</p>
+        <p class="page-sub">Cast a believable, everyday situation. The model finds the communication problem inside it and writes the scene — familiar situation first, creative interpretation second. Nothing here uses the 28 headline structures.</p>
       </header>
 
       <div class="sg-grid">
@@ -729,12 +892,18 @@
       </div>
 
       <div class="sg-field" style="margin-top:14px">
-        <span class="field-label">Scenario</span>
+        <span class="field-label">Situation</span>
         <div class="segmented" style="align-self:flex-start;margin-bottom:8px">
-          <button class="seg ${i.scenarioMode === "manual" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="manual">I'll write it</button>
-          <button class="seg ${i.scenarioMode === "ai" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="ai">Let the generator design it</button>
+          <button class="seg ${i.scenarioMode === "pick" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="pick">Pick a common situation</button>
+          <button class="seg ${i.scenarioMode === "manual" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="manual">Write my own</button>
+          <button class="seg ${i.scenarioMode === "ai" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="ai">Let the generator decide</button>
         </div>
-        <textarea id="sg-scenario" class="cc-textarea" rows="3" placeholder="Describe WHAT IS HAPPENING, not the dialogue. e.g. &quot;Person 1 is trapped next to a senior exec waiting for coffee and keeps trying to start a conversation.&quot;" ${
+        ${
+          i.scenarioMode === "pick"
+            ? sgGroupedSelect("sg-scenario-pick", SG_SCENARIOS, i.scenarioPick)
+            : ""
+        }
+        <textarea id="sg-scenario" class="cc-textarea" rows="3" placeholder="Describe an ordinary situation that could happen tomorrow — what is happening, not the dialogue. e.g. &quot;Waiting for a meeting to start next to a senior coworker and trying to make conversation.&quot;" ${
           i.scenarioMode === "manual" ? "" : "hidden"
         }>${esc(i.scenario)}</textarea>
       </div>
@@ -783,6 +952,7 @@
     bind("sg-escalation", "escalationPattern");
     bind("sg-placement", "productPlacement");
     bind("sg-length", "length");
+    bind("sg-scenario-pick", "scenarioPick");
     bind("sg-scenario", "scenario", "input");
     bind("sg-direction", "creativeDirection", "input");
   }
@@ -855,6 +1025,10 @@
       toast("Pick a topic first.");
       return;
     }
+    if (mode === "full" && sg.inputs.scenarioMode === "manual" && !sg.inputs.scenario.trim()) {
+      toast("Write the situation, or switch to picking or letting the generator decide.");
+      return;
+    }
 
     const prevSceneText = (sg.result && sg.result.scene) || "";
 
@@ -870,11 +1044,26 @@
       inputs = Object.assign(sgDefaultInputs(), {
         topic: sg.inputs.topic || "RANDOM",
         scenarioMode: "ai",
+        scenarioPick: "RANDOM",
+        scenario: "",
         productPlacement: "RANDOM",
         length: sg.inputs.length || "60 sec",
         creativeDirection: sg.inputs.creativeDirection || "",
       });
     }
+
+    // Collapse the 3-way situation control to what the server reads: a concrete
+    // situation string (from the library or free text) or nothing.
+    const chosenSituation =
+      inputs.scenarioMode === "pick" && inputs.scenarioPick && inputs.scenarioPick !== "RANDOM"
+        ? inputs.scenarioPick
+        : inputs.scenarioMode === "manual" && inputs.scenario.trim()
+        ? inputs.scenario.trim()
+        : "";
+    inputs = Object.assign({}, inputs, {
+      scenario: chosenSituation,
+      scenarioMode: chosenSituation ? "given" : "ai",
+    });
 
     const avoid = sg.history
       .slice(-8)
@@ -1298,7 +1487,8 @@
       }
 
       case "sg-scenario-mode": {
-        const m = el.dataset.mode === "manual" ? "manual" : "ai";
+        const d = el.dataset.mode;
+        const m = d === "pick" || d === "manual" ? d : "ai";
         if (state.sg.inputs.scenarioMode !== m) {
           state.sg.inputs.scenarioMode = m;
           renderSceneGen();
