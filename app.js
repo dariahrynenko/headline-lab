@@ -13,10 +13,8 @@
   const state = {
     tab: "generator",
     structures: [], // canonical headline structures
-    scenes: [], // canonical scene structures (empty for now)
     topics: [],
 
-    structuresMode: "headlines", // "headlines" | "scenes" — toggle inside the Structures tab
     structuresSearch: "",
     topicsSearch: "",
     selectedStructureId: null,
@@ -25,12 +23,10 @@
 
     wb: {
       mode: "A", // "A" = write with structure, "B" = adapt reference headline
-      structureKind: "headlines", // "headlines" | "scenes" — which library the structure picker shows
       structureId: "",
       topicId: "",
       referenceHeadline: "",
-      results: null, // string[] — generated headlines, or [sceneText]
-      resultsKind: "headlines", // "headlines" | "scenes" — what `results` holds
+      results: null, // string[] — generated headlines
       error: null, // error message string, or null
       loading: false,
     },
@@ -43,11 +39,32 @@
       error: null,
       loading: null, // null | "check" | "fix"
     },
+
+    sg: {
+      inputs: {
+        topic: "",
+        setting: "RANDOM",
+        characterA: "RANDOM",
+        characterB: "RANDOM",
+        socialDynamic: "RANDOM",
+        scenario: "",
+        scenarioMode: "ai", // "ai" | "manual"
+        dramaticTurn: "RANDOM",
+        escalationPattern: "RANDOM",
+        productPlacement: "RANDOM",
+        length: "60 sec",
+        creativeDirection: "",
+      },
+      scenario: null, // last ScenarioSpec from the server
+      result: null, // last { title, setting, characters, scenario, dramaticTurn, scene, creativeLogic }
+      history: [], // [{title, angle}] — session anti-repeat list
+      error: null,
+      loading: false,
+    },
   };
 
   function reloadLibraries() {
     state.structures = Store.loadStructures();
-    state.scenes = Store.loadScenes();
     state.topics = Store.loadTopics();
   }
 
@@ -126,6 +143,7 @@
     if (state.tab === "structures") renderStructures();
     else if (state.tab === "topics") renderTopics();
     else if (state.tab === "compliance") renderCompliance();
+    else if (state.tab === "scene-gen") renderSceneGen();
     else renderGenerator();
   }
 
@@ -141,9 +159,7 @@
   /* ---------------- Structures tab ---------------- */
 
   function renderStructures() {
-    const mode = state.structuresMode === "scenes" ? "scenes" : "headlines";
-    const dataset = mode === "scenes" ? state.scenes : state.structures;
-    const noun = mode === "scenes" ? "scenes" : "structures";
+    const dataset = state.structures;
 
     const q = state.structuresSearch.trim().toLowerCase();
     const items = dataset
@@ -157,13 +173,8 @@
 
     const selected = dataset.find((s) => s.id === state.selectedStructureId) || null;
 
-    const emptyText = dataset.length
-      ? `No ${noun} match your search.`
-      : mode === "scenes"
-      ? "No scene structures yet."
-      : "No structures.";
-    const placeholderText =
-      mode === "scenes" ? "Scene structures will appear here." : "Select a structure to read it.";
+    const emptyText = dataset.length ? "No structures match your search." : "No structures.";
+    const placeholderText = "Select a structure to read it.";
 
     view.innerHTML = `
       <div class="split">
@@ -171,12 +182,8 @@
           <div class="list-head">
             <h1>Structures</h1>
           </div>
-          <div class="segmented">
-            <button class="seg ${mode === "headlines" ? "active" : ""}" data-action="structures-mode" data-mode="headlines">Headlines</button>
-            <button class="seg ${mode === "scenes" ? "active" : ""}" data-action="structures-mode" data-mode="scenes">Scenes</button>
-          </div>
           <input class="search" id="structures-search" type="search"
-                 placeholder="Search ${noun}…" value="${esc(state.structuresSearch)}" />
+                 placeholder="Search structures…" value="${esc(state.structuresSearch)}" />
           <div class="card-list">
             ${
               items.length
@@ -355,23 +362,15 @@
     );
   }
 
-  // The structure picker in the Generator shows either the canonical headline
-  // structures or the canonical scene structures, per the Headlines | Scenes
-  // toggle. The Generator is the only place structureKind applies.
-  function wbStructureKind() {
-    return state.wb.structureKind === "scenes" ? "scenes" : "headlines";
-  }
-  function wbStructureDataset() {
-    return wbStructureKind() === "scenes" ? state.scenes : state.structures;
-  }
+  // The Generator's structure picker shows the canonical headline structures.
   function wbSelectedStructure() {
-    return wbStructureDataset().find((s) => s.id === state.wb.structureId) || null;
+    return state.structures.find((s) => s.id === state.wb.structureId) || null;
   }
 
   function structureOptions(selectedId, placeholder) {
     return (
       `<option value="">${esc(placeholder)}</option>` +
-      wbStructureDataset()
+      state.structures
         .map(
           (s) =>
             `<option value="${esc(s.id)}" ${s.id === selectedId ? "selected" : ""}>${esc(
@@ -390,9 +389,7 @@
 
   function generateHint() {
     if (state.wb.mode === "B") return "Enter a reference headline and select a topic.";
-    if (wbStructureKind() === "scenes" && !state.scenes.length)
-      return "No scene structures available yet.";
-    return `Select a ${wbStructureKind() === "scenes" ? "scene" : "structure"} and a topic.`;
+    return "Select a structure and a topic.";
   }
 
   function clearResults() {
@@ -418,7 +415,7 @@
 
       <div class="gen-cta">
         <button class="btn-generate" data-action="wb-generate" ${canGenerate() ? "" : "disabled"}>
-          ${m === "A" && wbStructureKind() === "scenes" ? "Generate scenes" : "Generate headlines"}
+          Generate headlines
         </button>
         <span class="cta-hint" id="wb-generate-hint">${canGenerate() ? "" : esc(generateHint())}</span>
       </div>
@@ -438,26 +435,14 @@
   }
 
   function generatorAHTML() {
-    const kind = wbStructureKind();
-    const dataset = wbStructureDataset();
-    const picker = dataset.length
-      ? `<div class="select-wrap">
-           <select id="wb-structure">${structureOptions(
-             state.wb.structureId,
-             kind === "scenes" ? "Select a scene…" : "Select a structure…"
-           )}</select>
-         </div>
-         <div id="wb-structure-preview" class="preview"></div>`
-      : `<div class="preview preview-muted">No scene structures yet.</div>`;
     return `
       <div class="gen-grid">
         <section class="gen-col">
           <span class="field-label">Structure</span>
-          <div class="segmented" style="margin-bottom:0;align-self:flex-start">
-            <button class="seg ${kind === "headlines" ? "active" : ""}" data-action="wb-structure-kind" data-kind="headlines">Headlines</button>
-            <button class="seg ${kind === "scenes" ? "active" : ""}" data-action="wb-structure-kind" data-kind="scenes">Scenes</button>
+          <div class="select-wrap">
+            <select id="wb-structure">${structureOptions(state.wb.structureId, "Select a structure…")}</select>
           </div>
-          ${picker}
+          <div id="wb-structure-preview" class="preview"></div>
         </section>
         <section class="gen-col">
           <span class="field-label">Topic</span>
@@ -555,13 +540,11 @@
 
     if (barActions) barActions.innerHTML = "";
 
-    const sceneMode = wb.mode === "A" && wbStructureKind() === "scenes";
-
     if (wb.loading) {
       box.innerHTML = `
         <div class="results-loading">
           <span class="spinner"></span>
-          <span>Generating ${sceneMode ? "your scene" : "headlines"}…</span>
+          <span>Generating headlines…</span>
         </div>`;
       return;
     }
@@ -570,22 +553,7 @@
       return;
     }
     if (!wb.results || !wb.results.length) {
-      box.innerHTML = `<div class="results-empty">Your generated ${
-        sceneMode ? "scene" : "headlines"
-      } will appear here.</div>`;
-      return;
-    }
-
-    if (wb.resultsKind === "scenes") {
-      if (barActions) {
-        barActions.innerHTML = `
-          <button class="btn btn-ghost btn-sm" data-action="wb-copy-text">Copy scene</button>
-          <button class="btn btn-ghost btn-sm" data-action="wb-regenerate">Regenerate</button>
-        `;
-      }
-      box.innerHTML = wb.results
-        .map((sceneText) => `<div class="detail-body">${esc(sceneText)}</div>`)
-        .join("");
+      box.innerHTML = `<div class="results-empty">Your generated headlines will appear here.</div>`;
       return;
     }
 
@@ -617,12 +585,9 @@
     if (!canGenerate() || state.wb.loading) return;
     const wb = state.wb;
 
-    const isScene = wb.mode === "A" && wbStructureKind() === "scenes";
-
     wb.loading = true;
     wb.error = null;
     wb.results = null;
-    wb.resultsKind = isScene ? "scenes" : "headlines";
 
     const btn = document.querySelector('[data-action="wb-generate"]');
     if (btn) btn.disabled = true;
@@ -630,7 +595,7 @@
 
     const topic = topicById(wb.topicId);
     const payload = {
-      workflow: isScene ? "SCENE" : wb.mode,
+      workflow: wb.mode,
       topic: { name: topic.name, description: topic.description, pains: topic.pains },
     };
     if (wb.mode === "A") {
@@ -647,15 +612,12 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      const items = isScene ? data.scenes : data.headlines;
       if (!res.ok) {
         wb.error = data.error || "Generation failed. Try again.";
-      } else if (Array.isArray(items) && items.length) {
-        wb.results = items;
+      } else if (Array.isArray(data.headlines) && data.headlines.length) {
+        wb.results = data.headlines;
       } else {
-        wb.error = isScene
-          ? "Claude returned no scene. Try again."
-          : "Claude returned no headlines. Try again.";
+        wb.error = "Claude returned no headlines. Try again.";
       }
     } catch (e) {
       wb.error = "Generation service is not running. Start the server and try again.";
@@ -664,6 +626,296 @@
       const b = document.querySelector('[data-action="wb-generate"]');
       if (b) b.disabled = !canGenerate();
       renderResults();
+    }
+  }
+
+  /* ---------------- Scene Generator ---------------- */
+
+  const SG_SETTINGS = [
+    "Office kitchen", "Elevator", "Networking event", "Bar", "Coffee shop", "Airport gate",
+    "Wedding reception", "Gym floor", "Supermarket checkout", "Hotel lobby", "Restaurant",
+    "Street", "Conference floor", "Interview waiting room", "Back of an Uber",
+    "Open-plan office", "Company all-hands", "Dog park", "Parking garage", "Rooftop party",
+  ];
+  const SG_ROLES = [
+    "Coworker", "Manager", "VP", "CEO", "Recruiter", "Interviewer", "Stranger",
+    "Old friend", "Partner / spouse", "Client", "Service worker", "Networking contact",
+    "Junior teammate", "Board member", "Founder",
+  ];
+  const SG_DYNAMICS = [
+    "stranger → stranger", "peer → peer", "junior → senior", "senior → junior",
+    "employee → manager", "candidate → recruiter", "colleague → colleague",
+    "friend → friend", "client → professional", "professional → client",
+  ];
+  const SG_TURNS = [
+    "Physical rejection", "Third-party overhears", "Third-party comments privately",
+    "Someone walks away", "Someone else gets the credit", "Mirror moment",
+    "Unexpected recognition", "Failed second attempt",
+    "Person realizes they keep repeating the same behavior", "Silent humiliation",
+    "Unexpected confession", "The other person calls it out flatly",
+  ];
+  const SG_ESCALATIONS = [
+    "Generic → invasive", "Polite → desperate", "Autopilot question loop",
+    "Over-explanation spiral", "Good intention → increasingly awkward execution",
+    "Repeated failed attempts",
+  ];
+  const SG_PLACEMENTS = [
+    "Direct peer recommendation", "Third-party recommendation", "Personal confession",
+    "Silent download moment", "Named as the fix for the specific problem",
+  ];
+  const SG_LENGTHS = ["30 sec", "45 sec", "60 sec", "90 sec"];
+
+  function sgDefaultInputs() {
+    return {
+      topic: "",
+      setting: "RANDOM",
+      characterA: "RANDOM",
+      characterB: "RANDOM",
+      socialDynamic: "RANDOM",
+      scenario: "",
+      scenarioMode: "ai", // "ai" | "manual"
+      dramaticTurn: "RANDOM",
+      escalationPattern: "RANDOM",
+      productPlacement: "RANDOM",
+      length: "60 sec",
+      creativeDirection: "",
+    };
+  }
+
+  function sgSelect(id, list, selected, randomLabel) {
+    const opts = list
+      .map((v) => `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`)
+      .join("");
+    const isRandom = !selected || selected === "RANDOM";
+    return `<div class="select-wrap"><select id="${id}">${opts}<option value="RANDOM" ${
+      isRandom ? "selected" : ""
+    }>${esc(randomLabel || "Random / AI decides")}</option></select></div>`;
+  }
+
+  function sgTopicSelect(selected) {
+    return `<div class="select-wrap"><select id="sg-topic"><option value="">Select a topic…</option>${state.topics
+      .slice()
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map(
+        (t) =>
+          `<option value="${esc(t.name)}" ${t.name === selected ? "selected" : ""}>${esc(t.name)}</option>`
+      )
+      .join("")}</select></div>`;
+  }
+
+  function sgCanGenerate() {
+    return !!state.sg.inputs.topic && !state.sg.loading;
+  }
+
+  function renderSceneGen() {
+    const sg = state.sg;
+    const i = sg.inputs;
+    view.innerHTML = `
+      <header class="page-hero">
+        <h1>Scene Generator</h1>
+        <p class="page-sub">Pick the creative ingredients. The model designs a believable situation from them, then writes the scene. Nothing here uses the 28 headline structures.</p>
+      </header>
+
+      <div class="sg-grid">
+        <div class="sg-field"><span class="field-label">Topic</span>${sgTopicSelect(i.topic)}</div>
+        <div class="sg-field"><span class="field-label">Setting</span>${sgSelect("sg-setting", SG_SETTINGS, i.setting)}</div>
+        <div class="sg-field"><span class="field-label">Character A · Person 1 (fails)</span>${sgSelect("sg-charA", SG_ROLES, i.characterA)}</div>
+        <div class="sg-field"><span class="field-label">Character B · Person 2 (notices)</span>${sgSelect("sg-charB", SG_ROLES, i.characterB)}</div>
+        <div class="sg-field"><span class="field-label">Social dynamic</span>${sgSelect("sg-dynamic", SG_DYNAMICS, i.socialDynamic)}</div>
+        <div class="sg-field"><span class="field-label">Dramatic turn</span>${sgSelect("sg-turn", SG_TURNS, i.dramaticTurn)}</div>
+        <div class="sg-field"><span class="field-label">Escalation pattern</span>${sgSelect("sg-escalation", SG_ESCALATIONS, i.escalationPattern)}</div>
+        <div class="sg-field"><span class="field-label">Product placement</span>${sgSelect("sg-placement", SG_PLACEMENTS, i.productPlacement, "Let the generator decide")}</div>
+        <div class="sg-field"><span class="field-label">Length</span>${sgSelect("sg-length", SG_LENGTHS, i.length, "Let the generator decide")}</div>
+      </div>
+
+      <div class="sg-field" style="margin-top:14px">
+        <span class="field-label">Scenario</span>
+        <div class="segmented" style="align-self:flex-start;margin-bottom:8px">
+          <button class="seg ${i.scenarioMode === "manual" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="manual">I'll write it</button>
+          <button class="seg ${i.scenarioMode === "ai" ? "active" : ""}" data-action="sg-scenario-mode" data-mode="ai">Let the generator design it</button>
+        </div>
+        <textarea id="sg-scenario" class="cc-textarea" rows="3" placeholder="Describe WHAT IS HAPPENING, not the dialogue. e.g. &quot;Person 1 is trapped next to a senior exec waiting for coffee and keeps trying to start a conversation.&quot;" ${
+          i.scenarioMode === "manual" ? "" : "hidden"
+        }>${esc(i.scenario)}</textarea>
+      </div>
+
+      <div class="sg-field" style="margin-top:14px">
+        <span class="field-label">Creative direction (optional)</span>
+        <input type="text" id="sg-direction" class="text-input" placeholder="e.g. &quot;uncomfortable but funny&quot; · &quot;less dialogue, more physical storytelling&quot; · &quot;make the rejection brutal but realistic&quot;" value="${esc(i.creativeDirection)}" />
+      </div>
+
+      <div class="gen-cta">
+        <button class="btn-generate" data-action="sg-generate" ${sgCanGenerate() ? "" : "disabled"}>Design &amp; write the scene</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-random" ${sg.loading ? "disabled" : ""}>Completely random</button>
+        <span class="cta-hint">${sg.inputs.topic ? "" : "Pick a topic to start."}</span>
+      </div>
+
+      <section class="results">
+        <div class="results-bar"><h2>Scene</h2><div id="sg-regen-bar" class="results-bar-actions"></div></div>
+        <div id="sg-results"></div>
+      </section>
+    `;
+    bindSceneGenInputs();
+    renderSceneResults();
+  }
+
+  function bindSceneGenInputs() {
+    const sg = state.sg;
+    const bind = (id, key, ev) => {
+      const el = document.getElementById(id);
+      if (el)
+        el.addEventListener(ev || "change", () => {
+          sg.inputs[key] = el.value;
+          if (key === "topic") {
+            const btn = document.querySelector('[data-action="sg-generate"]');
+            if (btn) btn.disabled = !sgCanGenerate();
+            const hint = document.querySelector(".gen-cta .cta-hint");
+            if (hint) hint.textContent = sg.inputs.topic ? "" : "Pick a topic to start.";
+          }
+        });
+    };
+    bind("sg-topic", "topic");
+    bind("sg-setting", "setting");
+    bind("sg-charA", "characterA");
+    bind("sg-charB", "characterB");
+    bind("sg-dynamic", "socialDynamic");
+    bind("sg-turn", "dramaticTurn");
+    bind("sg-escalation", "escalationPattern");
+    bind("sg-placement", "productPlacement");
+    bind("sg-length", "length");
+    bind("sg-scenario", "scenario", "input");
+    bind("sg-direction", "creativeDirection", "input");
+  }
+
+  function sgLine(label, value) {
+    if (!value) return "";
+    return `<div class="sg-meta-row"><span class="sg-meta-label">${esc(label)}</span><span>${esc(value)}</span></div>`;
+  }
+
+  function renderSceneResults() {
+    const box = document.getElementById("sg-results");
+    const bar = document.getElementById("sg-regen-bar");
+    if (!box) return;
+    const sg = state.sg;
+
+    if (bar) bar.innerHTML = "";
+
+    if (sg.loading) {
+      box.innerHTML = `<div class="results-loading"><span class="spinner"></span><span>Designing the situation, then writing the scene…</span></div>`;
+      return;
+    }
+    if (sg.error) {
+      box.innerHTML = `<div class="results-error">${esc(sg.error)}</div>`;
+      return;
+    }
+    if (!sg.result) {
+      box.innerHTML = `<div class="results-empty">Your scene will appear here.</div>`;
+      return;
+    }
+
+    const r = sg.result;
+    if (bar) {
+      bar.innerHTML = `
+        <button class="btn btn-ghost btn-sm" data-action="sg-copy">Copy scene</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-regen" data-mode="regen-scenario">New scenario</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-regen" data-mode="regen-turn">New turn</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-regen" data-mode="regen-characters">New characters</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-regen" data-mode="regen-ending">New ending</button>
+        <button class="btn btn-ghost btn-sm" data-action="sg-regen" data-mode="regen-product">New product beat</button>
+      `;
+    }
+
+    box.innerHTML = `
+      ${r.title ? `<h3 class="sg-title">${esc(r.title)}</h3>` : ""}
+      <div class="sg-meta">
+        ${sgLine("Setting", r.setting)}
+        ${sgLine("Characters", r.characters)}
+        ${sgLine("Scenario", r.scenario)}
+        ${sgLine("Dramatic turn", r.dramaticTurn)}
+      </div>
+      <div class="detail-body sg-scene">${esc(r.scene)}</div>
+      ${
+        r.creativeLogic
+          ? `<details class="sg-logic"><summary>Creative logic</summary><div>${esc(r.creativeLogic)}</div></details>`
+          : ""
+      }
+    `;
+  }
+
+  async function generateScene(mode) {
+    const sg = state.sg;
+    if (sg.loading) return;
+
+    const needsPrev = mode !== "full" && mode !== "random";
+    if (needsPrev && !sg.scenario) {
+      toast("Generate a scene first.");
+      return;
+    }
+    if (mode !== "random" && !sg.inputs.topic) {
+      toast("Pick a topic first.");
+      return;
+    }
+
+    const prevSceneText = (sg.result && sg.result.scene) || "";
+
+    sg.loading = true;
+    sg.error = null;
+    if (mode === "full" || mode === "random") sg.result = null;
+    renderSceneResults();
+    const gbtn = document.querySelector('[data-action="sg-generate"]');
+    if (gbtn) gbtn.disabled = true;
+
+    let inputs = sg.inputs;
+    if (mode === "random") {
+      inputs = Object.assign(sgDefaultInputs(), {
+        topic: sg.inputs.topic || "RANDOM",
+        scenarioMode: "ai",
+        productPlacement: "RANDOM",
+        length: sg.inputs.length || "60 sec",
+        creativeDirection: sg.inputs.creativeDirection || "",
+      });
+    }
+
+    const avoid = sg.history
+      .slice(-8)
+      .map((h) => `${h.title} — ${h.angle}`)
+      .filter(Boolean);
+
+    const payload = {
+      mode,
+      inputs,
+      scenarioSpec: sg.scenario || null,
+      prevScene: prevSceneText,
+      avoid,
+    };
+
+    try {
+      const res = await fetch("/api/scene", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        sg.error = data.error || "Scene generation failed. Try again.";
+      } else if (data.result && data.result.scene) {
+        if (data.scenario) sg.scenario = data.scenario;
+        sg.result = data.result;
+        const angle =
+          (sg.scenario && sg.scenario.conflictSource) ||
+          (data.result.scenario || "").slice(0, 90);
+        sg.history.push({ title: data.result.title || "untitled", angle });
+        sg.history = sg.history.slice(-12);
+      } else {
+        sg.error = "Claude returned no scene. Try again.";
+      }
+    } catch (e) {
+      sg.error = "Generation service is not running. Start the server and try again.";
+    } finally {
+      sg.loading = false;
+      const b = document.querySelector('[data-action="sg-generate"]');
+      if (b) b.disabled = !sgCanGenerate();
+      renderSceneResults();
     }
   }
 
@@ -1007,16 +1259,6 @@
     if (!el) return;
     const id = el.dataset.id;
     switch (el.dataset.action) {
-      case "structures-mode": {
-        const m = el.dataset.mode === "scenes" ? "scenes" : "headlines";
-        if (state.structuresMode !== m) {
-          state.structuresMode = m;
-          state.selectedStructureId = null;
-          state.structuresSearch = "";
-        }
-        renderStructures();
-        break;
-      }
       case "open-structure":
         state.selectedStructureId = id;
         renderStructures();
@@ -1034,27 +1276,14 @@
         }
         renderGenerator();
         break;
-      case "wb-structure-kind": {
-        const k = el.dataset.kind === "scenes" ? "scenes" : "headlines";
-        if (state.wb.structureKind !== k) {
-          state.wb.structureKind = k;
-          state.wb.structureId = "";
-          clearResults();
-        }
-        renderGenerator();
-        break;
-      }
       case "wb-generate":
       case "wb-regenerate":
         generate();
         break;
       case "wb-copy-text":
         (async () => {
-          const wb = state.wb;
-          const sep = wb.resultsKind === "scenes" ? "\n\n" : "\n";
-          const ok = await copyText((wb.results || []).join(sep));
-          const label = wb.resultsKind === "scenes" ? "Scene copied." : "All headlines copied.";
-          toast(ok ? label : "Copy failed — select the text manually.");
+          const ok = await copyText((state.wb.results || []).join("\n"));
+          toast(ok ? "All headlines copied." : "Copy failed — select the text manually.");
         })();
         break;
       case "wb-copy-one": {
@@ -1067,6 +1296,32 @@
         }
         break;
       }
+
+      case "sg-scenario-mode": {
+        const m = el.dataset.mode === "manual" ? "manual" : "ai";
+        if (state.sg.inputs.scenarioMode !== m) {
+          state.sg.inputs.scenarioMode = m;
+          renderSceneGen();
+        }
+        break;
+      }
+      case "sg-generate":
+        generateScene("full");
+        break;
+      case "sg-random":
+        generateScene("random");
+        break;
+      case "sg-regen":
+        generateScene(el.dataset.mode || "regen-scenario");
+        break;
+      case "sg-copy":
+        (async () => {
+          const r = state.sg.result;
+          if (!r || !r.scene) return;
+          const ok = await copyText(r.scene);
+          toast(ok ? "Scene copied." : "Copy failed — select the text manually.");
+        })();
+        break;
 
       case "cc-check":
         runComplianceCheck();

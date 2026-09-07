@@ -20,6 +20,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { assemblePrompt, compliancePrompt, complianceFixPrompt } = require("./prompts");
+const { scenarioDesignPrompt, sceneWritePrompt } = require("./scene-prompts");
 
 /* ---------- minimal .env loader (no dependency) ---------- */
 (function loadEnv() {
@@ -52,7 +53,8 @@ const ANTHROPIC_VERSION = "2023-06-01";
 const MAX_TOKENS = 4000; // workflow B (reference-headline adaptation)
 const HEADLINE_MAX_TOKENS = 20000; // workflow A: the single-pass generator does all its
 // candidate generation, rejection and comparison internally in adaptive-thinking tokens.
-const SCENE_MAX_TOKENS = 8000; // one full dialogue scene
+const SCENE_MAX_TOKENS = 8000; // one full dialogue scene (Scene Generator stage 2)
+const SCENARIO_MAX_TOKENS = 6000; // Scene Generator stage 1: structured scenario design
 const COMPLIANCE_MAX_TOKENS = 6000; // structured risk assessment / rewrite
 const HEADLINE_COUNT = 10; // what the UI receives
 
@@ -61,7 +63,13 @@ const STATIC_TYPES = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
 };
-const HIDDEN_FILES = new Set(["server.js", "prompts.js", "package.json", "package-lock.json"]);
+const HIDDEN_FILES = new Set([
+  "server.js",
+  "prompts.js",
+  "scene-prompts.js",
+  "package.json",
+  "package-lock.json",
+]);
 
 /* ---------- helpers ---------- */
 
@@ -180,20 +188,17 @@ async function handleGenerate(req, res) {
   if (body.__error) return sendJson(res, body.__error.status, { error: body.__error.message });
 
   const workflow = body.workflow;
-  if (workflow !== "A" && workflow !== "B" && workflow !== "SCENE") {
+  if (workflow !== "A" && workflow !== "B") {
     return sendJson(res, 400, { error: "Unknown workflow." });
   }
-  const isScene = workflow === "SCENE";
 
   const topic = body.topic;
   if (!topic || typeof topic.name !== "string" || !topic.name.trim()) {
     return sendJson(res, 400, { error: "A topic is required." });
   }
-  if (workflow === "A" || workflow === "SCENE") {
+  if (workflow === "A") {
     if (!body.structure || typeof body.structure.content !== "string" || !body.structure.content.trim()) {
-      return sendJson(res, 400, {
-        error: isScene ? "A scene structure is required." : "A structure is required.",
-      });
+      return sendJson(res, 400, { error: "A structure is required." });
     }
   } else {
     if (typeof body.referenceHeadline !== "string" || !body.referenceHeadline.trim()) {
@@ -222,23 +227,13 @@ async function handleGenerate(req, res) {
     count: HEADLINE_COUNT,
   });
 
-  const maxTokens = isScene
-    ? SCENE_MAX_TOKENS
-    : workflow === "A"
-    ? HEADLINE_MAX_TOKENS
-    : MAX_TOKENS;
+  const maxTokens = workflow === "A" ? HEADLINE_MAX_TOKENS : MAX_TOKENS;
   const result = await claudeComplete(apiKey, { maxTokens, prompt });
   if (!result.ok) return sendJson(res, result.status, { error: result.error });
 
   const text = result.text;
   if (!text) {
-    return sendJson(res, 502, {
-      error: isScene ? "Claude returned no scene. Try again." : "Claude returned no headlines. Try again.",
-    });
-  }
-
-  if (isScene) {
-    return sendJson(res, 200, { scenes: [text] });
+    return sendJson(res, 502, { error: "Claude returned no headlines. Try again." });
   }
 
   if (workflow !== "A") {
@@ -322,6 +317,132 @@ async function handleCompliance(req, res) {
   return sendJson(res, 200, { result: parsed });
 }
 
+/* ---------- POST /api/scene ---------- */
+
+// Two-stage Scene Generator, separate from headline generation. Stage 1 designs
+// a structured scenario from the user's manual ingredient selections; stage 2
+// writes the scene from that scenario. Regenerate modes reuse a prior scenario:
+//   full / random          — stage 1 + stage 2
+//   regen-scenario/-turn/-characters — stage 1 (constrained) + stage 2
+//   regen-ending / regen-product     — stage 2 only, on the prior scenario+scene
+const SCENE_REGEN_MODES = new Set([
+  "full",
+  "random",
+  "regen-scenario",
+  "regen-turn",
+  "regen-characters",
+  "regen-ending",
+  "regen-product",
+]);
+
+// The stage-2 output is a labelled block (TITLE: / SETTING: / ... / SCENE: /
+// CREATIVE LOGIC:). Locate each label at the start of a line, then take the
+// text between one label and the next — position-based, so a multi-paragraph
+// SCENE body survives intact.
+function parseSceneResult(text) {
+  const LABELS = [
+    "TITLE",
+    "SETTING",
+    "CHARACTERS",
+    "SCENARIO",
+    "DRAMATIC TURN",
+    "SCENE",
+    "CREATIVE LOGIC",
+  ];
+  const src = String(text || "");
+  const found = [];
+  for (const lab of LABELS) {
+    const re = new RegExp("^[ \\t>*#-]*" + lab.replace(/ /g, "[ \\t]+") + "[ \\t]*:", "im");
+    const m = src.match(re);
+    if (m) found.push({ lab, start: m.index, bodyStart: m.index + m[0].length });
+  }
+  found.sort((a, b) => a.start - b.start);
+  const out = {};
+  for (let k = 0; k < found.length; k++) {
+    const end = k + 1 < found.length ? found[k + 1].start : src.length;
+    out[found[k].lab] = src.slice(found[k].bodyStart, end).trim();
+  }
+  return {
+    title: out["TITLE"] || "",
+    setting: out["SETTING"] || "",
+    characters: out["CHARACTERS"] || "",
+    scenario: out["SCENARIO"] || "",
+    dramaticTurn: out["DRAMATIC TURN"] || "",
+    scene: out["SCENE"] || "",
+    creativeLogic: out["CREATIVE LOGIC"] || "",
+  };
+}
+
+async function handleScene(req, res) {
+  const body = await readJsonBody(req);
+  if (body.__error) return sendJson(res, body.__error.status, { error: body.__error.message });
+
+  const mode = SCENE_REGEN_MODES.has(body.mode) ? body.mode : "full";
+  const inputs = body.inputs && typeof body.inputs === "object" ? body.inputs : {};
+  const prevSpec =
+    body.scenarioSpec && typeof body.scenarioSpec === "object" ? body.scenarioSpec : null;
+  const prevScene = typeof body.prevScene === "string" ? body.prevScene : "";
+  const avoid = Array.isArray(body.avoid)
+    ? body.avoid.filter((a) => typeof a === "string" && a.trim()).slice(0, 12)
+    : [];
+
+  const stage2Only = mode === "regen-ending" || mode === "regen-product";
+  if (stage2Only && !prevSpec) {
+    return sendJson(res, 400, { error: "That regenerate needs an existing scene. Generate one first." });
+  }
+  const regenTarget = mode === "regen-ending" ? "ending" : mode === "regen-product" ? "product" : null;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    return sendJson(res, 503, {
+      error:
+        "ANTHROPIC_API_KEY is not configured on the server. Add it to a .env file and restart the server.",
+    });
+  }
+
+  // ---- Stage 1: scenario design (skipped for ending / product regenerates) ----
+  let spec = prevSpec;
+  if (!stage2Only) {
+    const s1 = await claudeComplete(apiKey, {
+      maxTokens: SCENARIO_MAX_TOKENS,
+      prompt: scenarioDesignPrompt({ inputs, mode, prevSpec, avoid }),
+    });
+    if (!s1.ok) return sendJson(res, s1.status, { error: s1.error });
+    const parsed = extractJson(s1.text);
+    if (parsed && typeof parsed === "object" && parsed.scenario) {
+      spec = parsed;
+    } else if (s1.text && s1.text.trim()) {
+      // JSON parse failed — degrade to a prose brief so stage 2 still runs.
+      spec = Object.assign({}, prevSpec, {
+        scenario: s1.text.trim(),
+        length: inputs.length || (prevSpec && prevSpec.length) || "60 sec",
+        creativeDirection: inputs.creativeDirection || "",
+        _parseFallback: true,
+      });
+    } else {
+      return sendJson(res, 502, { error: "Claude returned no scenario. Try again." });
+    }
+  }
+
+  // ---- Stage 2: scene writing ----
+  const s2 = await claudeComplete(apiKey, {
+    maxTokens: SCENE_MAX_TOKENS,
+    prompt: sceneWritePrompt({ spec, regenTarget, prevScene, avoid }),
+  });
+  if (!s2.ok) return sendJson(res, s2.status, { error: s2.error });
+  if (!s2.text || !s2.text.trim()) {
+    return sendJson(res, 502, { error: "Claude returned no scene. Try again." });
+  }
+
+  const result = parseSceneResult(s2.text);
+  if (!result.scene) {
+    // Format slip — hand back the raw text as the scene so nothing is lost.
+    result.scene = s2.text.trim();
+  }
+
+  sendJson(res, 200, { scenario: spec, result });
+}
+
 /* ---------- static files ---------- */
 
 function serveStatic(req, res) {
@@ -378,6 +499,13 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && route === "/api/compliance") {
     handleCompliance(req, res).catch((e) => {
       console.error("Unexpected error in /api/compliance:", e);
+      if (!res.headersSent) sendJson(res, 500, { error: "Unexpected server error." });
+    });
+    return;
+  }
+  if (req.method === "POST" && route === "/api/scene") {
+    handleScene(req, res).catch((e) => {
+      console.error("Unexpected error in /api/scene:", e);
       if (!res.headersSent) sendJson(res, 500, { error: "Unexpected server error." });
     });
     return;
