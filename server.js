@@ -19,12 +19,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const {
-  assemblePrompt,
-  headlineQualityCheck,
-  compliancePrompt,
-  complianceFixPrompt,
-} = require("./prompts");
+const { assemblePrompt, compliancePrompt, complianceFixPrompt } = require("./prompts");
 
 /* ---------- minimal .env loader (no dependency) ---------- */
 (function loadEnv() {
@@ -55,15 +50,11 @@ const ROOT = __dirname;
 const MODEL = "claude-sonnet-5"; // verified against platform.claude.com/docs (Models overview)
 const ANTHROPIC_VERSION = "2023-06-01";
 const MAX_TOKENS = 4000; // workflow B (reference-headline adaptation)
-const HEADLINE_MAX_TOKENS = 20000; // workflow A: the internal pass (30 candidates + per-candidate
-// meaning check + 12-point scoring + gates) runs almost entirely in adaptive-thinking tokens;
-// 8000 was consumed by thinking alone on the most constrained structures, leaving no text.
+const HEADLINE_MAX_TOKENS = 20000; // workflow A: the single-pass generator does all its
+// candidate generation, rejection and comparison internally in adaptive-thinking tokens.
 const SCENE_MAX_TOKENS = 8000; // one full dialogue scene
 const COMPLIANCE_MAX_TOKENS = 6000; // structured risk assessment / rewrite
 const HEADLINE_COUNT = 10; // what the UI receives
-const HEADLINE_POOL_COUNT = 15; // workflow A stage 1: the candidate pool the quality checker cuts down
-const NEAR_DUPLICATE_POOL_FLOOR = 12; // below this, a full checker pass isn't worth its cost
-const NEAR_DUPLICATE_CORE_DIFF = 14; // avg core-diff word count below which a pool reads as one skeleton
 
 const STATIC_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -89,24 +80,6 @@ function parseHeadlines(text) {
     .map((l) => l.replace(/^\d+[.)]\s+/, "").trim())
     .filter(Boolean);
   return numbered.length ? numbered : lines;
-}
-
-// Parse the Quality Checker's "3, 7, 1, 12, ..." response into 1-indexed pool
-// positions: every integer in range, in the order given, de-duplicated. Out-of-
-// range numbers (a hallucinated index) are dropped rather than crashing a lookup.
-function parseSelectedIndices(text, poolLength) {
-  const nums = (String(text).match(/\d+/g) || [])
-    .map(Number)
-    .filter((n) => n >= 1 && n <= poolLength);
-  const seen = new Set();
-  const out = [];
-  for (const n of nums) {
-    if (!seen.has(n)) {
-      seen.add(n);
-      out.push(n);
-    }
-  }
-  return out;
 }
 
 // Read a JSON request body (shared by the /api endpoints). Returns the parsed
@@ -246,7 +219,7 @@ async function handleGenerate(req, res) {
     structure: body.structure,
     topic: normalizedTopic,
     referenceHeadline: body.referenceHeadline,
-    count: workflow === "A" ? HEADLINE_POOL_COUNT : HEADLINE_COUNT,
+    count: HEADLINE_COUNT,
   });
 
   const maxTokens = isScene
@@ -272,142 +245,27 @@ async function handleGenerate(req, res) {
     return sendJson(res, 200, { headlines: parseHeadlines(text) });
   }
 
-  // Workflow A, stage 2: an independent editorial pass over the candidate pool.
-  const pool = parseHeadlines(text);
-  if (!pool.length) {
+  // Workflow A is single-pass: the generator does all candidate generation,
+  // rejection and comparison internally and returns the final headlines
+  // directly. Only output hygiene here — dedupe, cap at HEADLINE_COUNT.
+  const headlines = dedupeHeadlines(parseHeadlines(text)).slice(0, HEADLINE_COUNT);
+  if (!headlines.length) {
     return sendJson(res, 502, { error: "Claude returned no headlines. Try again." });
   }
-
-  let finalists = pool;
-  if (pool.length > HEADLINE_COUNT) {
-    // Skip the full editorial pass when there isn't enough real signal for it to
-    // earn its cost: too few candidates, or a pool that's obviously one skeleton
-    // with a word swapped (the old S22 failure mode). In that case a diversity-
-    // maximizing selection beats spending ~50-60s scoring near-duplicates against
-    // the same 11 criteria. Every other pool still gets the independent Checker call.
-    if (pool.length < NEAR_DUPLICATE_POOL_FLOOR || poolLooksNearIdentical(pool)) {
-      finalists = selectDiverseSubset(pool, HEADLINE_COUNT);
-    } else {
-      const checkPrompt = headlineQualityCheck({
-        pool,
-        structure: body.structure,
-        topic: normalizedTopic,
-        count: HEADLINE_COUNT,
-      });
-      const checkRes = await claudeComplete(apiKey, {
-        maxTokens: HEADLINE_MAX_TOKENS,
-        prompt: checkPrompt,
-      });
-      if (checkRes.ok && checkRes.text) {
-        // The Checker returns pool line numbers now, not retyped headline text
-        // (faster, and removes any chance of it rewording a line while retyping
-        // it). Resolve indices back against the original pool.
-        const indices = parseSelectedIndices(checkRes.text, pool.length);
-        if (indices.length) {
-          finalists = indices.map((i) => pool[i - 1]);
-        } else {
-          // Model ignored the numbers-only format and sent text back — fall back
-          // to the legacy full-text parse so a format slip doesn't break generation.
-          const picked = parseHeadlines(checkRes.text);
-          if (picked.length) finalists = picked;
-        }
-      }
-      // If the checker call fails or returns nothing usable, fall back to the pool.
-    }
-  }
-
-  sendJson(res, 200, { headlines: reconcileHeadlines(finalists, pool, HEADLINE_COUNT) });
+  sendJson(res, 200, { headlines });
 }
 
-// ---- Near-duplicate pool detection (no LLM call; word-level heuristic) ----
-//
-// Compares two headlines by stripping their common leading and trailing words
-// (which is expected — most structures share a locked phrase) and counting
-// what's left. A pool where that "core" is almost always just a word or two
-// (a verb, a noun) is restating one idea with the wrapper changed; a pool
-// where the core differs by a clause's worth of words is genuinely different
-// ideas that merely share a structural skeleton. Thresholds were calibrated
-// against real generations: a known bad pool (S22 pre-fix) averaged ~9 core
-// words; two known-good pools (S1, S10) averaged ~23-25.
-function headlineWords(s) {
-  return String(s)
-    .toLowerCase()
-    .replace(/[^a-z0-9'\s]/g, "")
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-function coreDiffWordCount(a, b) {
-  const wa = headlineWords(a);
-  const wb = headlineWords(b);
-  let pre = 0;
-  while (pre < wa.length && pre < wb.length && wa[pre] === wb[pre]) pre++;
-  const maxSuf = Math.min(wa.length - pre, wb.length - pre);
-  let suf = 0;
-  while (suf < maxSuf && wa[wa.length - 1 - suf] === wb[wb.length - 1 - suf]) suf++;
-  return (wa.length - pre - suf) + (wb.length - pre - suf);
-}
-
-function poolLooksNearIdentical(pool) {
-  if (pool.length < 4) return false;
-  let total = 0;
-  let pairs = 0;
-  for (let i = 0; i < pool.length; i++) {
-    for (let j = i + 1; j < pool.length; j++) {
-      total += coreDiffWordCount(pool[i], pool[j]);
-      pairs++;
-    }
-  }
-  return pairs > 0 && total / pairs < NEAR_DUPLICATE_CORE_DIFF;
-}
-
-// Greedy farthest-point selection: pick the headline pair-wise least similar to
-// what's already chosen, repeatedly. Used only as a fallback when the pool
-// doesn't warrant a full Checker pass, so it optimizes for surface diversity
-// among candidates that already cleared stage 1's own quality gates.
-function selectDiverseSubset(pool, count) {
-  if (pool.length <= count) return pool.slice();
-  const chosen = [pool[0]];
-  const remaining = pool.slice(1);
-  while (chosen.length < count && remaining.length) {
-    let bestIdx = 0;
-    let bestScore = -1;
-    for (let i = 0; i < remaining.length; i++) {
-      let minDiff = Infinity;
-      for (const c of chosen) {
-        minDiff = Math.min(minDiff, coreDiffWordCount(remaining[i], c));
-      }
-      if (minDiff > bestScore) {
-        bestScore = minDiff;
-        bestIdx = i;
-      }
-    }
-    chosen.push(remaining[bestIdx]);
-    remaining.splice(bestIdx, 1);
-  }
-  return chosen;
-}
-
-// Return exactly `count` headlines: the checker's picks first (deduped), then
-// backfilled from the original pool if the checker returned fewer than `count`.
-function reconcileHeadlines(picked, pool, count) {
+// Minimal output hygiene: drop case-insensitive duplicates, keep order.
+function dedupeHeadlines(list) {
   const seen = new Set();
   const out = [];
-  const push = (h) => {
+  for (const h of list) {
     const key = String(h).trim().toLowerCase();
-    if (!key || seen.has(key)) return;
+    if (!key || seen.has(key)) continue;
     seen.add(key);
     out.push(String(h).trim());
-  };
-  for (const h of picked) {
-    if (out.length >= count) break;
-    push(h);
   }
-  for (const h of pool) {
-    if (out.length >= count) break;
-    push(h);
-  }
-  return out.slice(0, count);
+  return out;
 }
 
 /* ---------- POST /api/compliance ---------- */
