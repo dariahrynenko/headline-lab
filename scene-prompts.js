@@ -394,7 +394,15 @@ Design the situation by answering, in your head, all of the following, then enco
 - Why does this situation escalate on its own — what about the setting or the stakes keeps them going?
 - How do the selected dramatic ingredients (the turn, the escalation direction) naturally interact with each other and with this conflict?
 - Why would the second character realistically notice and react — as a real person who is done with it or genuinely wants to help, not a trainer waiting to train?
-- THE PRODUCT ENTRY — this is the hardest part. The product is NOT a required beat that fires after the diagnosis. It must be a natural consequence of THIS exact conversation. Before you place it, answer: why would THIS person mention THIS training to THIS person at THIS exact moment? If there's no convincing answer, redesign the entry — do not fall back on a generic recommendation. It enters through one of: personal confession ("I used to do exactly that. I started doing small talk training — it drills the actual moments where I default."); a third party who overheard ("Someone needs to get you into small talk training." / "What?" / "Nine minutes a day. It drills this exact thing."); proof through behaviour (the second character shows the replacement line, then: "I stopped rehearsing conversations in my head. Started doing articulation training."); or quiet discovery (nobody sells anything — the first character is left alone and searches for the training themselves). The mechanism named must map to the failure we just watched: freeze -> drills speaking under pressure; generic opener -> drills opening with a specific point; rambling -> drills saying the point first; weak small talk -> small talk training. FORBIDDEN: "You should try...", "I recommend...", the second character switching into coach/advertiser voice, feature listing, the product landing the instant the diagnosis ends, sudden polished marketing language, forcing a spoken mention when the placement is better shown through action.
+- THE PRODUCT ENTRY — the hardest part, and the one that usually breaks. The recommendation must be CAUSALLY AND CHARACTER-LOGICALLY EARNED. It is not a required beat and it does not have to come from whoever diagnosed the problem. Before you place it, you must be able to answer all of:
+  1. WHO recommends the product?
+  2. WHY does that person credibly know about it? (they went through the same thing / they have watched this exact pattern before / they know this specific person's struggle)
+  3. What EVIDENCE, visible in the scene, shows that this person is NOT doing the thing themselves — that they actually changed, or that they genuinely recognise the pattern from experience? Their credibility must come from the scenario, never from the line "this helped me" alone.
+  4. WHY would they recommend it to THIS person specifically?
+  5. WHY does the recommendation happen NOW, at this exact moment?
+  If those five answers don't hold together, the placement is INVALID — rewrite the scenario architecture (who's in the scene, who's the recommender, how they behave) before you place any product.
+  HARD BAN — retroactive claims: a character who has demonstrated the exact communication problem throughout the scene CANNOT then claim they solved it with the training. That is a contradiction. If the recommender is a reformed sufferer, the scene must show them NOT behaving that way (a clean, specific line; actually answering what was said; getting to the point) — or make the recommender a credible third party (a coworker, a family member, someone who's watched this happen) instead.
+  The recommendation should feel like "I've seen this before — here's what actually helped," never "anyway, here's the product this ad is selling." Named as "articulation training" / "small talk training" or by mechanism, never a brand name, never "you should try..." / "I recommend...", never a coach speech or feature list, never landing the instant the diagnosis ends. The mechanism named maps to the failure we just watched (freeze -> speaking under pressure; generic opener -> opening with a point; rambling -> point first).
 - What physical action or beat ends the scene — earned by this situation, not a generic walk-away?
 - If the product were deleted from the scene entirely, would the situation still work as a compelling dramatic moment? It must.
 
@@ -416,7 +424,15 @@ Design the situation by answering, in your head, all of the following, then enco
   "communicationFailure": "the specific speech behaviour that causes the problem",
   "escalation": { "direction": "the chosen pattern, restated as a direction for this situation", "howItBuilds": "why the tension rises here" },
   "dramaticTurn": { "type": "the chosen kind of turn", "howItHappensHere": "the most natural version of it for these characters/setting/conflict" },
-  "productPlacement": { "type": "the chosen type", "whyHere": "why THIS person would raise THIS training with THIS person at THIS moment — the earned reason", "moment": "where in the arc it surfaces and through whom (never immediately after the diagnosis line, never as a coach speech)", "mechanismLine": "the one concrete thing it drills, mapped to the failure we just watched, as 'articulation training' / 'small talk training' or a mechanism — never a brand name, never 'you should try'" },
+  "productPlacement": {
+    "type": "the chosen type",
+    "recommender": "which character raises it, and why they credibly know about it (went through the same thing / has watched this pattern before / knows this person's struggle)",
+    "credibilityEvidence": "what the scene SHOWS that proves the recommender isn't doing the thing themselves — a clean specific line, actually answering what was said, getting to the point — or that they genuinely recognise the pattern from experience. If you can't name concrete in-scene evidence, this recommender is wrong — change it.",
+    "whyThisPerson": "why they'd say it to THIS person specifically",
+    "whyNow": "why the recommendation happens at this exact moment",
+    "moment": "where in the arc it surfaces (never immediately after the diagnosis line, never a coach speech)",
+    "mechanismLine": "the one concrete thing it drills, mapped to the failure we just watched, as 'articulation training' / 'small talk training' or a mechanism — never a brand name, never 'you should try'"
+  },
   "ending": "the physical / action beat that closes the scene",
   "length": "one of: 30 sec | 45 sec | 60 sec | 90 sec",
   "creativeDirection": "echo the user's note, or \\"\\" ",
@@ -456,14 +472,22 @@ Here is the existing scene:
 
 ${prevScene}
 
-Keep the scene. Change ONLY how and where the product surfaces. Same placement type ("${spec.productPlacement && spec.productPlacement.type}"), but a different, still-earned entry — through personal confession, a third party who overheard, proof through behaviour, or quiet discovery. Still referred to as "articulation training" / "small talk training" or by mechanism, never by brand name; never "you should try..."; never a coach speech; never the instant the diagnosis ends. If the type is quiet/silent, let the closing action carry it with nobody naming it. Return the FULL scene with the new placement, in the same output format below.`;
+Keep the scene. Change ONLY how and where the product surfaces. Same placement type ("${spec.productPlacement && spec.productPlacement.type}"), but a different, still-earned entry. The new recommender must have credibility that comes from the scene itself: they are shown NOT doing the failing behaviour, or they are a genuine third party who has watched this exact pattern before, or they know this person's struggle. A character who has demonstrated the problem all scene cannot claim they solved it — pick a different recommender or a phone/download beat instead. Still "articulation training" / "small talk training" or by mechanism, never a brand name; never "you should try..."; never a coach speech; never the instant the diagnosis ends. If the type is quiet/silent, let the closing action carry it with nobody naming it. Return the FULL scene with the new placement, in the same output format below.`;
   } else {
     task = `## WRITE THE SCENE
 Write the scene from the scenario below. Follow the SCENE WRITING MEMORY's principles for physical detail, one-word rejections, escalation, the turn, diagnosis-as-math, and the physical close. Length: ${spec && spec.length} — ${lengthGuide}
 
 The pacing beats in the memory are a guide, not a template. Use the dramatic architecture the scenario calls for. Do not make every selected ingredient a visibly bolted-on beat — the scene must feel like something that happened, not a checklist worked through. Every ingredient in the spec is present, but woven in.
 
-THE PRODUCT MOMENT — it is earned, not scheduled. It is not an advertising beat that fires after the diagnosis. Build it exactly as the scenario's productPlacement.whyHere / moment describe: through personal confession ("I used to do exactly that. I started doing small talk training — it drills the actual moments where I default."), a third party who overheard, proof through behaviour, or quiet discovery (the failing character alone, phone out, searching — nobody says anything). The mechanism named maps to the failure we just watched. The audience thinks "oh — that's why they know this," not "okay, now the ad starts." Never "you should try..." / "I recommend...". Never a coach speech, feature list, or the product landing the instant the diagnosis ends. If the placement is a quiet-discovery / silent-download type, do not force anyone to say the product out loud at all — let the final action carry it.`;
+THE PRODUCT MOMENT — it must be logically inevitable, not scheduled. We are NOT trying to make it shorter; we are trying to make it earned.
+
+Build it exactly as the scenario's productPlacement describes — recommender / credibilityEvidence / whyThisPerson / whyNow / moment. The recommender's credibility has to be visible IN THE SCENE:
+- A reformed sufferer only works if the scene has already SHOWN them not doing it — a clean, specific line; actually answering what was said; getting to the point. If the character who recommends the training has themselves been rambling / asking dead-end questions / hedging all scene, that is a contradiction — do not let them claim "I used to do this, it helped." Use a different recommender (a coworker, a family member, someone who's watched it happen) or a phone/download beat instead.
+- A third party works if they have plainly seen this pattern ("My daughter put me on small talk training when I caught myself doing the exact same thing" / "Half my team's on it").
+- Proof through behaviour: they demonstrate the better line first, then briefly say why they can.
+- Quiet discovery: nobody sells anything — the failing character is left alone and searches for it. If the placement is this type, no one names the product out loud; the final action carries it.
+
+The mechanism named maps to the failure we just watched. It should feel like "I've seen this before — here's what actually helped," never "anyway, here's the product." Never "you should try..." / "I recommend...", never a coach speech or feature list, never landing the instant the diagnosis ends. If the scene as written cannot support a credible recommendation, that means the scenario architecture is wrong for a spoken recommendation — use the silent phone/download beat.`;
   }
 
   return `You are writing a short scene for social video (a RiseGuide ad) — dialogue-driven, shot as a real moment.
@@ -496,7 +520,14 @@ ${task}${avoidBlock}
 
 - The word "RiseGuide" appears anywhere in the scene — dialogue, stage direction, or a screen. (The product is referred to only as "articulation training" / "small talk training" or by mechanism.)
 - Any speaker is labelled PERSON 1 / PERSON 2 / MAN / WOMAN / GUY / GIRL instead of a concrete role.
-- The product mention isn't earned — you cannot answer "why would THIS person say THIS to THIS person right now?" from the scene itself.
+- The person recommending the training demonstrates, anywhere in the scene, the same communication problem they claim it solved — rambling, dead-end questions, hedging. (A reformed sufferer must be shown NOT doing it.)
+- "I used to..." / "this helped me" is not supported by anything visible in the scene — the recommender's credibility is only asserted, never shown.
+- A character suddenly becomes an expert on the problem with no justification for how they'd know.
+- The product is there only because the script needs a product mention.
+- The recommendation could be lifted into any other scene without changing a word.
+- The recommendation does not follow directly from the specific human problem we just watched.
+- The recommender's behaviour before the recommendation contradicts the recommendation.
+- The product mention isn't earned — you cannot answer "who recommends it, why do they credibly know, what shows they changed, why this person, why now" from the scene itself.
 - The product lands the instant the diagnosis ends, or a character says "you should try..." / "I recommend...", or switches into coach / advertiser voice, or lists features.
 - The placement is a quiet-discovery / silent type but a character still names the product out loud.
 - The situation is extraordinary, cinematic, or invented for drama rather than something that could plainly happen tomorrow (an emergency, a bizarre coincidence, a shocking reveal, a mysterious stranger, a movie-like twist).
