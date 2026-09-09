@@ -546,7 +546,16 @@ Rules:
 - THE PRODUCT LINE IS SHORT TOO. The recommender does not explain what the product is, why it exists, its features, the mechanism in full, or the other person's whole problem. The scene already established the problem. "I used to do the same thing." (pause) "Started doing small talk training." — plus at most one concrete line of what it drills. That's the whole recommendation.
 - THE REMOVE-HALF TEST: after drafting, look at every contextual sentence and stage direction. If deleting it still leaves the audience able to follow the scene, delete it. Do this aggressively. Keep fewer details — but make each one more specific.
 
-Maximise recognition per line, not information per scene. Every line must move the interaction, reveal character, reveal the communication failure, build tension, turn the scene, connect to the solution, or land the close. A line that exists only to inform the audience gets cut.
+Maximise recognition per line, not information per scene. Specific does NOT mean detailed — a precise line is short.
+
+EVERY LINE OF DIALOGUE MUST EARN ITS PLACE by doing at least one of these:
+1. create the communication failure
+2. escalate the failure
+3. reveal a reaction
+4. deliver the diagnosis
+5. naturally introduce the solution
+6. create the ending
+A line that only supplies context, exposition, backstory, or explanation does none of these — cut it. Before finalising, remove any line the audience could understand the scene without hearing. Given a choice between adding a line that explains what is happening and letting the existing behaviour, action, or reaction carry it — let the behaviour carry it. The audience should FEEL the communication problem before anyone explains it.
 
 ## BEFORE YOU RETURN IT — reject and rewrite internally if any of these are true
 
@@ -578,6 +587,8 @@ Maximise recognition per line, not information per scene. Every line must move t
 - A character says out loud something both characters already know, so the audience can hear it ("As you know...", "We've worked together three years and...").
 - A stage direction states a feeling or a realisation ("he was uncomfortable", "she realised he wasn't interested") instead of showing it through an action or object.
 - The failing character explains their own problem instead of accidentally revealing it through what they say and do.
+- The failing character delivers a nervous monologue about their manager, deadline, ex, relationship history, or work situation — a short social interaction turned into a miniature backstory.
+- Any line of dialogue does none of: create the failure, escalate it, reveal a reaction, deliver the diagnosis, introduce the solution, create the ending — it is only context or explanation, and it is still there.
 - The failure runs longer than about 3-5 dialogue lines before a reaction or turn arrives — extra failed questions that don't reveal anything new, change the dynamic, or genuinely escalate.
 - The "escalation" is the same kind of beat repeated (generic question, generic question, generic question) rather than a trajectory that shifts the social temperature.
 - A second or third failed attempt is present without the scenario needing it.
