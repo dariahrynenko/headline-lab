@@ -447,11 +447,11 @@ Return the JSON object and nothing else.`;
 
 function sceneWritePrompt({ spec, regenTarget = null, prevScene = "", avoid = [] }) {
   const lengthGuide = {
-    "30 sec": "about 6-9 short exchanges. Very tight. One rejection round, quick turn, quick close.",
-    "45 sec": "about 10-14 exchanges.",
-    "60 sec": "about 14-20 exchanges.",
-    "90 sec": "about 20-30 exchanges. Room for a second failed attempt and a longer silence.",
-  }[String(spec && spec.length).trim()] || "about 14-20 exchanges.";
+    "30 sec": "about 6-10 short exchanges. Very tight. Failure clear in 3-4 lines, one reaction, quick diagnosis, quick close.",
+    "45 sec": "about 8-14 exchanges. Failure clear in 3-4 lines — spend the rest on reaction, diagnosis, product, close.",
+    "60 sec": "about 12-18 exchanges. Still only 3-5 lines on the failure itself; the length buys a fuller reaction and turn, not more failed questions.",
+    "90 sec": "about 16-26 exchanges. Room for a second failed attempt OR a longer silence — not a third and fourth round of the same failure.",
+  }[String(spec && spec.length).trim()] || "about 12-18 exchanges. Only 3-5 lines on the failure itself.";
 
   const avoidBlock =
     Array.isArray(avoid) && avoid.length
@@ -477,7 +477,7 @@ Keep the scene. Change ONLY how and where the product surfaces. Same placement t
     task = `## WRITE THE SCENE
 Write the scene from the scenario below. Follow the SCENE WRITING MEMORY's principles for physical detail, one-word rejections, escalation, the turn, diagnosis-as-math, and the physical close. Length: ${spec && spec.length} — ${lengthGuide}
 
-The pacing beats in the memory are a guide, not a template. Use the dramatic architecture the scenario calls for. Do not make every selected ingredient a visibly bolted-on beat — the scene must feel like something that happened, not a checklist worked through. Every ingredient in the spec is present, but woven in.
+The pacing beats in the memory are a guide, not a template — including its round counts. Where it says "2-3 rounds before the diagnosis", read that as a ceiling, not a target. Use the dramatic architecture the scenario calls for. Do not make every selected ingredient a visibly bolted-on beat — the scene must feel like something that happened, not a checklist worked through. Every ingredient in the spec is present, but woven in.
 
 THE PRODUCT MOMENT — it must be logically inevitable, not scheduled. We are NOT trying to make it shorter; we are trying to make it earned.
 
@@ -515,6 +515,19 @@ Name every speaker by the concrete role label in the scenario's "characters" (e.
   }). Use the exact same label every time that person speaks. If the dramatic turn brings in a third person, give them their own concrete role label. NEVER use PERSON 1, PERSON 2, MAN, WOMAN, GUY, GIRL, or a bare first name as a speaker label. The memory writes its examples as "PERSON 1 / PERSON 2" — do not copy that.
 
 ${task}${avoidBlock}
+
+## PACING — DEMONSTRATE THE FAILURE, DON'T EXHAUST IT
+
+The dialogue should feel like the most revealing few seconds pulled from a real interaction — a highlight reel of the failure, not a transcript of the conversation. Real conversations are full of boring lines; the scene keeps only the ones that reveal the social failure.
+
+- THE FAILURE LANDS IN ABOUT 3-4 EXCHANGES. Once the audience can see that the questions produce one-word answers, that the conversation is dying, that this person doesn't know how to move it forward — the failure is established. Stop demonstrating it.
+- MORE OF THE SAME IS NOT ESCALATION. "Generic → invasive" means generic question → job question → invasive question and STOP — the trajectory is clear in three beats. It does not mean four generic questions then two invasive ones. Escalation changes the social temperature; it does not just add word count.
+- A SECOND ATTEMPT IS OPTIONAL. Do not assume attempt → rejection → attempt → rejection → attempt → diagnosis. Sometimes one failed opener is enough. Sometimes two build the best escalation. Let the scenario decide. Never add a round just because a memory example had one.
+- GET TO THE REACTION EARLY. Once the failure is clear, the reaction is the interesting part — a look, a silence, someone turning away, a third-party line, a laugh, someone leaving, a mirror beat, an interruption. Often more interesting than another failed question. A physical rejection / overhear / silent turn can replace extra dialogue entirely.
+- DIAGNOSIS REFRAMES, IT DOES NOT NARRATE. Not "you keep asking generic questions" (that just describes what we watched). Instead a sharper interpretation: "I can answer every question you've asked with one word." / "You're keeping it alive — you're not giving it anywhere to go." The diagnosis adds a NEW insight.
+- THE "CAN I CUT THIS?" TEST on every line of the failure portion: does it reveal a NEW aspect of the failure, change the social dynamic, or create real escalation? If no — cut it. If it repeats the previous beat in different words — cut it. If it's only there to make the conversation longer — cut it.
+
+When the audience gets it, move on: reaction → insight → consequence → solution → close. Use the minimum dialogue needed to make the failure land and be memorable. This is a pacing principle, not a fixed beat sequence — some scenarios need more, some less.
 
 ## CONTEXT ECONOMY — GIVE THE AUDIENCE JUST ENOUGH, THEN GET OUT OF THE WAY
 
@@ -565,6 +578,11 @@ Maximise recognition per line, not information per scene. Every line must move t
 - A character says out loud something both characters already know, so the audience can hear it ("As you know...", "We've worked together three years and...").
 - A stage direction states a feeling or a realisation ("he was uncomfortable", "she realised he wasn't interested") instead of showing it through an action or object.
 - The failing character explains their own problem instead of accidentally revealing it through what they say and do.
+- The failure runs longer than about 3-5 dialogue lines before a reaction or turn arrives — extra failed questions that don't reveal anything new, change the dynamic, or genuinely escalate.
+- The "escalation" is the same kind of beat repeated (generic question, generic question, generic question) rather than a trajectory that shifts the social temperature.
+- A second or third failed attempt is present without the scenario needing it.
+- The diagnosis narrates what we just watched ("you keep asking generic questions") instead of reframing it with a sharper interpretation.
+- The scene reads like a full transcript of the conversation rather than the most revealing few seconds of it.
 - The product recommendation explains what the product is, its features, or the whole mechanism, rather than one short conversational line plus at most one concrete thing it drills.
 - Any contextual sentence could be deleted with the audience still able to follow the scene, and it is still there.
 - The failing character becomes charismatic right after one piece of advice, or the scene ends in a happy transformation.
