@@ -516,6 +516,25 @@ Name every speaker by the concrete role label in the scenario's "characters" (e.
 
 ${task}${avoidBlock}
 
+## CONTEXT ECONOMY — GIVE THE AUDIENCE JUST ENOUGH, THEN GET OUT OF THE WAY
+
+The scene must feel like a 60-second moment someone happened to capture — not a 5-minute story compressed into one. We should feel like we walked into the middle of a real moment, not like a narrator is introducing us to a world.
+
+Do not explain what the audience can infer. The setting, the relationship, the stakes, the backstory, what each person feels and why it matters — the audience gets all of this from a few concrete details and the dialogue itself. Clarity is not the same as explanation. A scene can be completely clear with very little information.
+
+Rules:
+
+- THREE LAYERS OF CONTEXT, NO MORE. (1) One physical detail for where we are. (2) One behavioural detail for who these people are to each other. (3) Let the dialogue reveal the problem. Do not add a fourth layer that explains the backstory.
+- ONE CONCRETE DETAIL IS ENOUGH for any piece of context. Not "she was a regular who'd been coming for years and was friendly with the barber" — instead the barber just says "Same as last time?" and the relationship is understood. Not "he was nervous about his first board presentation" — instead "(The deck is open on his laptop. Board meeting in ten minutes.)"
+- DIALOGUE IS NOT A BACKSTORY DELIVERY SYSTEM. Real people do not explain shared history to someone who already knows it. No "as you know", no "we've worked together three years and I've always struggled to—", no character narrating their own motivation. If both characters already know it, find a visual or behavioural way to show it, or cut it.
+- 1–2 SENTENCES OF CONTEXT PER TURN, MAX. If a character starts explaining their history / the situation / their motivation / why they're nervous / what happened earlier — stop, and ask whether an action, object, or shorter line can carry it. It almost always can.
+- NO MOTIVATION EXPLANATION. Not "he was embarrassed" — "(He looks down at his drink.)" Not "she didn't know what to say" — "(She opens her mouth. Nothing.)" Physical detail replaces the sentence.
+- SHORTER DIALOGUE THAN FEELS natural to write — especially for the failing character. They do not explain their problem. They accidentally reveal it through what they say and do. The audience discovers it; nobody states it.
+- THE PRODUCT LINE IS SHORT TOO. The recommender does not explain what the product is, why it exists, its features, the mechanism in full, or the other person's whole problem. The scene already established the problem. "I used to do the same thing." (pause) "Started doing small talk training." — plus at most one concrete line of what it drills. That's the whole recommendation.
+- THE REMOVE-HALF TEST: after drafting, look at every contextual sentence and stage direction. If deleting it still leaves the audience able to follow the scene, delete it. Do this aggressively. Keep fewer details — but make each one more specific.
+
+Maximise recognition per line, not information per scene. Every line must move the interaction, reveal character, reveal the communication failure, build tension, turn the scene, connect to the solution, or land the close. A line that exists only to inform the audience gets cut.
+
 ## BEFORE YOU RETURN IT — reject and rewrite internally if any of these are true
 
 - The word "RiseGuide" appears anywhere in the scene — dialogue, stage direction, or a screen. (The product is referred to only as "articulation training" / "small talk training" or by mechanism.)
@@ -541,6 +560,13 @@ ${task}${avoidBlock}
 - The setting could be swapped for any generic location.
 - The dramatic turn is predictable, or it reads as a bolted-on beat rather than something that happened.
 - It needs a narrator to explain what is happening.
+- The scene opens by introducing the world ("After a long day...", "She had always...", "For the past three years...", "Neither of them knew...") instead of dropping us into a live moment.
+- Any character delivers more than 1–2 sentences of context, backstory, or motivation at once — history, why they're there, what happened earlier, why it matters.
+- A character says out loud something both characters already know, so the audience can hear it ("As you know...", "We've worked together three years and...").
+- A stage direction states a feeling or a realisation ("he was uncomfortable", "she realised he wasn't interested") instead of showing it through an action or object.
+- The failing character explains their own problem instead of accidentally revealing it through what they say and do.
+- The product recommendation explains what the product is, its features, or the whole mechanism, rather than one short conversational line plus at most one concrete thing it drills.
+- Any contextual sentence could be deleted with the audience still able to follow the scene, and it is still there.
 - The failing character becomes charismatic right after one piece of advice, or the scene ends in a happy transformation.
 - The same insight could carry 50 other scenes unchanged.
 - The product could be removed and nothing about the scene would change.
@@ -565,7 +591,7 @@ SCENARIO: <1-2 sentences — the situation>
 DRAMATIC TURN: <one line — what turns the scene>
 
 SCENE:
-<the script. Concrete role labels as speaker names + lines. Physical beats in parentheses. Blank line between speakers. NO narration, NO meta-commentary, NO explaining the lesson inside the dialogue.>
+<the script. Open in the middle of a live moment — one physical detail, then straight into it; never a line that introduces the situation. Concrete role labels as speaker names + lines. Physical beats in parentheses, kept short and concrete. Blank line between speakers. NO narration, NO meta-commentary, NO explaining the lesson inside the dialogue, NO backstory a character wouldn't actually say.>
 
 CREATIVE LOGIC: <2-4 sentences on why this situation and this architecture — this section only, never inside the SCENE>`;
 }
